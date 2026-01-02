@@ -187,6 +187,7 @@ class Env():
 
         # Unity'e gönder (sadece gerekli parametreler: mode, pitch, yaw, thrust)
         # NOT: Unity şu anda roll parametresini beklemiyor, sadece pitch, yaw, thrust
+        print(f"Step {self.step_count}: Action gönderiliyor - pitch={pitch:.3f}, yaw={yaw:.3f}, thrust={thrust:.3f}")
         self.con.sendCs((0, pitch, yaw, thrust))  
         
         # Unity'den gelen yeni durumu oku
