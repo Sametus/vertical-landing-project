@@ -18,28 +18,56 @@ namespace Assets.Scripts
         public Rigidbody rocketRb;
         public Transform targetPoint;
 
-        public float mainThrustPower = 10000f;
+        [Header("Effects")]
+        public ParticleSystem mainEngineParticles;
+
+        public float mainThrustPower = 15000f;  // Düşey itki gücü artırıldı (10000 → 15000)
         public float rcsPower = 1000f;
 
         private Vector3 feetOffset = new Vector3(0, -2.0f, 0);
 
+        void Start()
+        {
+            // Kısıtlamaları KALDIRIYORUZ. 
+            // Roket tamamen serbest olsun, dengesini yapay zeka sağlasın.
+            rocketRb.constraints = RigidbodyConstraints.None; 
+
+            // Otomatik Ayak Mesafesi Hesaplama (Önceki konuşmamızdan)
+            Collider col = GetComponent<Collider>();
+            if (col != null)
+            {
+                float halfHeight = col.bounds.extents.y / transform.localScale.y;
+                feetOffset = new Vector3(0, -halfHeight, 0);
+            }
+        }
+
+        void FixedUpdate()
+        {
+            
+        }
+
         public void ResetEnv(float x, float y, float z, float pitch, float yaw)
         {
-            if (rocketRb == null)
-            {
-                Debug.LogError("ResetEnv: rocketRb is NULL!");
-                return;
-            }
-
             rocketRb.linearVelocity = Vector3.zero;
             rocketRb.angularVelocity = Vector3.zero;
-            rocketRb.WakeUp(); // Rigidbody'yi uyandır
 
             transform.position = new Vector3(x, y, z);
+            
+            // Başlangıçta düzgün doğsun ama sonra serbest kalsın
             transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
+            
+            // Kısıtlama yok
+            rocketRb.constraints = RigidbodyConstraints.None;
 
-            Debug.Log($"........ORTAM SIFIRLANDI.......... Position: ({x:F2}, {y:F2}, {z:F2}) Rotation: ({pitch:F2}, {yaw:F2}, 0)");
+            if (mainEngineParticles != null)
+            {
+                mainEngineParticles.Stop();
+                mainEngineParticles.Clear();
+            }
+
+            Debug.Log("........ORTAM SIFIRLANDI..........");
         }
+
         public void doAction(string dataString)
         {
             dataString = dataString.Replace("[", "").Replace("]", "").Replace(" ", "").Trim();
@@ -80,12 +108,7 @@ namespace Assets.Scripts
                         float thrust = ParseFloat(parts[3]);
                         float roll = ParseFloat(parts[4]);
 
-                        Debug.Log($"doAction case 0: pitch={pitch}, yaw={yaw}, thrust={thrust}, roll={roll}");
                         ApplyPhysics(pitch, yaw, thrust, roll);
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"doAction case 0: parts.Length={parts.Length}, expected >= 5");
                     }
                     break;
             }
@@ -101,30 +124,34 @@ namespace Assets.Scripts
 
         private void ApplyPhysics(float pitch, float yaw, float thrust, float roll)
         {
-            if (rocketRb == null)
-            {
-                Debug.LogError("rocketRb is NULL!");
-                return;
-            }
-
-            // Rigidbody'yi uyandır (sleep modunda olabilir)
-            rocketRb.WakeUp();
-
             float motorGucu = Mathf.Clamp01(thrust);
-            Vector3 thrustForce = Vector3.up * motorGucu * mainThrustPower;
-            rocketRb.AddRelativeForce(thrustForce);
+            rocketRb.AddRelativeForce(Vector3.up * motorGucu * mainThrustPower);
 
-            // Pitch: X ekseni (transform.right) - öne/arkaya yatma
-            // Yaw: Z ekseni (transform.forward) - sağa/sola yatma  
-            // Roll: Y ekseni (transform.up) - kendi ekseninde dönme
+            // EKSENLERİ DOĞRU OTURTMA:
+            // transform.right   (X) -> PITCH (Öne arkaya yatma)
+            // transform.forward (Z) -> YAW (Sağa sola yatma)
+            // transform.up      (Y) -> ROLL (Kendi ekseninde dönme / Spin)
+            
             Vector3 pitchTork = transform.right * pitch * rcsPower;
-            Vector3 yawTork = transform.forward * yaw * rcsPower;
-            Vector3 rollTork = transform.up * roll * rcsPower;
-            Vector3 totalTorque = pitchTork + yawTork + rollTork;
+            Vector3 yawTork   = transform.forward * yaw * rcsPower;
+            Vector3 rollTork  = transform.up * roll * (rcsPower * 0.1f); // Artık roll çalışıyor
 
-            rocketRb.AddTorque(totalTorque);
+            rocketRb.AddTorque(pitchTork + yawTork + rollTork);
 
-            Debug.Log($"ApplyPhysics: pitch={pitch:F3}, yaw={yaw:F3}, thrust={thrust:F3}, roll={roll:F3} | ThrustForce={thrustForce.magnitude:F1} | Torque={totalTorque.magnitude:F1} | Mass={rocketRb.mass} | IsSleeping={rocketRb.IsSleeping()} | Velocity={rocketRb.linearVelocity.magnitude:F2}");
+            // Efekt Kodları Aynen Kalabilir
+            if (mainEngineParticles != null)
+            {
+                var emission = mainEngineParticles.emission;
+                if (motorGucu > 0.01f)
+                {
+                    if (!mainEngineParticles.isPlaying) mainEngineParticles.Play();
+                    emission.rateOverTime = motorGucu * 500f;
+                }
+                else
+                {
+                    emission.rateOverTime = 0f;
+                }
+            }
         }
 
         // connector.cs ilet

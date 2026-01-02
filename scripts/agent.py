@@ -32,19 +32,19 @@ class PPOAgent:
 
     def __init__(self):
         self.state_size = 13
-        self.action_size = 4
-        self.lr = 3e-4
+        self.action_size = 4  # [pitch, yaw, thrust, roll] - 4 continuous action
+        self.lr = 1e-4
         self.gamma = 0.99
         self.gae_lambda = 0.95
-        self.clip_eps=0.2
+        self.clip_eps=0.1
         self.vf_coef=0.5
-        self.ent_coef = 0.0
-        self.epochs = 10
+        self.ent_coef = 0.01
+        self.epochs = 4
         self.batch_size = 256
         self.max_grad_norm = 0.5
 
         self.model = self.build_model()
-        self.log_std = tf.Variable(-0.5*tf.ones((self.action_size), dtype=tf.float32),
+        self.log_std = tf.Variable(-1.0*tf.ones((self.action_size), dtype=tf.float32),
                                    trainable=True,
                                    name="log_std",)
         self.opt = Adam(learning_rate = self.lr)
@@ -55,6 +55,7 @@ class PPOAgent:
     def build_model(self):
         inp = Input(shape=(self.state_size,),dtype=tf.float32)
         x = Dense(256,activation="tanh")(inp)
+        x = Dense(256,activation="tanh")(x)
         x = Dense(256,activation="tanh")(x)
 
         mu = Dense(self.action_size,activation=None, name="mu")(x)
