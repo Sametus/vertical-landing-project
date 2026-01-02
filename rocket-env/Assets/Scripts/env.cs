@@ -154,11 +154,55 @@ namespace Assets.Scripts
             }
         }
 
+        // Ayakların en alt noktasını bulur (açılı ayaklar için)
+        private Vector3 FindLowestLegPoint()
+        {
+            Vector3 lowestPoint = transform.TransformPoint(feetOffset); // Gövdenin alt ucu başlangıç
+            
+            // Tüm child objeleri kontrol et (ayakları bul)
+            foreach (Transform child in transform)
+            {
+                // Leg veya Leg_Pivot ile başlayan objeleri bul
+                if (child.name.Contains("Leg") && !child.name.Contains("Pivot"))
+                {
+                    Collider legCol = child.GetComponent<Collider>();
+                    if (legCol != null)
+                    {
+                        // Collider'ın en alt noktasını al (bounds.min.y)
+                        Vector3 legBottom = legCol.bounds.min;
+                        if (legBottom.y < lowestPoint.y)
+                        {
+                            lowestPoint = legBottom;
+                        }
+                    }
+                    else
+                    {
+                        // Collider yoksa, transform pozisyonunu kullan
+                        // Ama açılı olduğu için yaklaşık hesaplama yapalım
+                        Vector3 legPos = child.position;
+                        // Ayak uzunluğu yaklaşık olarak scale.y ile verilmiş olabilir
+                        float legLength = child.localScale.y;
+                        // 30 derece açıyla en alt nokta: sin(30) * legLength = 0.5 * legLength
+                        float bottomOffset = legLength * 0.5f;
+                        Vector3 legBottom = legPos - Vector3.up * bottomOffset;
+                        if (legBottom.y < lowestPoint.y)
+                        {
+                            lowestPoint = legBottom;
+                        }
+                    }
+                }
+            }
+            
+            return lowestPoint;
+        }
+
         // connector.cs ilet
         public string getStates()
         {
             if (targetPoint == null || rocketRb == null) return "";
-            Vector3 globalFeetPos = transform.TransformPoint(feetOffset);
+            
+            // Açılı ayaklar için gerçek en alt noktayı bul
+            Vector3 globalFeetPos = FindLowestLegPoint();
 
             float dx = targetPoint.position.x - globalFeetPos.x;
             float dz = targetPoint.position.z - globalFeetPos.z;

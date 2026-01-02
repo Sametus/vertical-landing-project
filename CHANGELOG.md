@@ -62,4 +62,31 @@
 - Roket kendi ekseni etrafında dönebilir (roll)
 - Daha fazla kontrol özgürlüğü
 
+#### 2026-01-02 - Açılı Ayaklar İçin Gerçek Ayak Pozisyonu Hesaplama (DENEYSEL)
+
+**Dosya:** `rocket-env/Assets/Scripts/env.cs`
+
+**Sorun:**
+- `feetOffset` hesaplaması sadece roket gövdesinin alt ucunu (collider'ın yarı yüksekliği) kullanıyordu
+- Ancak roketin ayakları açılı bir şekilde gövdeden çıkıyor (30° açıyla)
+- Bu yüzden ayakların gerçek temas noktası, gövdenin alt ucundan daha aşağıda
+- `dy` (yükseklik) ölçümü yanlış olabilir ve iniş kontrolü etkilenebilir
+
+**Çözüm:**
+- `FindLowestLegPoint()` metodu eklendi
+- Bu metod tüm child objeleri tarayarak "Leg" içeren objeleri buluyor
+- Her bir ayağın collider'ını kontrol ediyor ve `bounds.min.y` ile en alt noktayı hesaplıyor
+- Collider yoksa, açılı ayaklar için yaklaşık hesaplama yapıyor (30° açı varsayımı)
+- `getStates()` metodunda artık `feetOffset` yerine `FindLowestLegPoint()` kullanılıyor
+
+**Etki:**
+- `dy` (yükseklik) ölçümü artık ayakların gerçek temas noktasına göre yapılıyor
+- İniş kontrolü daha doğru çalışmalı
+
+**ÖNEMLİ NOT:**
+- Bu değişiklik deneyseldir ve test edilmesi gerekiyor
+- Eğer sorun çıkarsa (hata, yanlış hesaplama, performans sorunu) geri alınabilir
+- Unity'de ayakların collider yapısı veya hiyerarşisi farklıysa kod uyarlanmalı
+- Eğer sorun çıkarsa `getStates()` metodunda `FindLowestLegPoint()` yerine eski `transform.TransformPoint(feetOffset)` kullanılabilir
+
 ---
