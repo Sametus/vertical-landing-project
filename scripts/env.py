@@ -99,90 +99,90 @@ class Env():
         reward = 0.0
         done = False
 
-        # State'leri çek
-        dx = float(states[0])
-        dy = float(states[1])
-        dz = float(states[2])
-        vx = float(states[3])
-        vy = float(states[4])
-        vz = float(states[5])
-        
-        wx = float(states[6]) 
-        wy = float(states[7]) 
-        wz = float(states[8]) 
-        
-        qx = float(states[9])
-        qy = float(states[10])
-        qz = float(states[11])
-        qw = float(states[12])
+        dx, dy, dz = map(float, states[0:3])
+        vx, vy, vz = map(float, states[3:6])
+        wx, wy, wz = map(float, states[6:9])
+        qx, qy, qz, qw = map(float, states[9:13])
 
-        # --- 1. ACİL DURDURMA KONTROLLERİ (TERMINAL STATES) ---
+        # Quaternion normalize
+        qnorm = (qx*qx + qy*qy + qz*qz + qw*qw) ** 0.5
+        if qnorm > 1e-6:
+            qx/=qnorm; qy/=qnorm; qz/=qnorm; qw/=qnorm
 
-        # Tavan Kontrolü
-        if dy >= 100:
+        up_y = 1.0 - 2.0*(qx*qx + qz*qz)
+
+        dist_h = (dx*dx + dz*dz) ** 0.5
+        v_h    = (vx*vx + vz*vz) ** 0.5
+        w_mag  = (wx*wx + wy*wy + wz*wz) ** 0.5
+
+        # --- TERMINAL ---
+        # Ceiling: low'da sadece yukarı kaçıyorsa bitir (daha mantıklı)
+        if dy >= 75.0 and vy > 0.5:
             self.termination_reason = "CeilingHit"
-            reward = -500.0
-            done = True
-            return reward, done 
+            return -500.0, True
 
-        # Saha Dışı Kontrolü (Uzağa kaçarsa)
-        if abs(dx) >= 45 or abs(dz) >= 45:
+        if abs(dx) >= 25.0 or abs(dz) >= 25.0:
             self.termination_reason = "OutOfBounds"
-            reward = -500.0
-            done = True
-            return reward, done
+            return -500.0, True
 
-        # Devrilme Kontrolü (Tilted)
-        up_vector_y = 1.0 - 2.0 * (qx*qx + qz*qz)
-        if up_vector_y < 0.5:
+        # Tilt: low'da çok devrildiyse bitir
+        if up_y < 0.35:
             self.termination_reason = "Tilted"
-            reward = -500.0
-            done = True
-            return reward, done
-            
-        # Spin Kontrolü
-        abs_roll = abs(wy)
-        if abs_roll > 10.0:
+            return -500.0, True
+
+        if w_mag > 10.0:
             self.termination_reason = "Spin"
-            reward = -500.0
-            done = True
-            return reward, done
+            return -500.0, True
 
-        # --- 2. İNİŞ KONTROLÜ (TEK VE NET SINIR: 1.0 METRE) ---
-        # Gri bölge yok! 1 metreye girdiği an ya kahramandır ya da mevta.
-        
-        if dy <= 1.0:
-            # A. Önce Konum Kontrolü: Hedefin içinde mi?
-            in_landing_zone = (abs(dx) < 5.0 and abs(dz) < 5.0)
-            
-            if not in_landing_zone:
-                # Yavaş olsa bile tarlaya indi.
+        # --- LANDING CHECK ---
+        if dy <= 1.5:
+            # zone: kare yerine daire daha stabil
+            in_zone = (dist_h < 4.0)  # low gevşek: 4m
+
+            if not in_zone:
                 self.termination_reason = "MissedZone"
-                reward = -300.0
-                done = True
-                return reward, done
+                return -350.0, True
 
-            # B. Hız Kontrolü
-            impact_speed = abs(vy)
-            speed_limit = 4.0  # Şimdilik 4.0 m/s
+            ok_vy   = (abs(vy) <= 4.5)   # low gevşek
+            ok_vh   = (v_h <= 3.0)       # kritik ek
+            ok_tilt = (up_y >= 0.85)     # kritik ek
+            ok_spin = (w_mag <= 4.0)     # kritik ek
 
-            if impact_speed < speed_limit:
-                # --- ZAFER (SUCCESS) ---
-                # Büyük Havuç Stratejisi: 1500 Puan
-                # + Zaman bonusu (Erken inmek iyidir)
+            if ok_vy and ok_vh and ok_tilt and ok_spin:
                 bonus = (self.max_steps - self.step_count) * 0.1
-                reward = 1500.0 + bonus
-                
                 self.termination_reason = "Success"
-                done = True
-                return reward, done
+                return 1500.0 + bonus, True
             else:
-                # --- ÇAKILMA (CRASH) ---
-                # Cezayı azalttık (-300) ki korkudan donmasın.
                 self.termination_reason = "Crash"
-                reward = -300.0
-                done = True
-                return reward, done
+                return -300.0, True
+
+        # --- SHAPING ---
+        reward += -0.02
+
+        # merkeze uzaklık cezası
+        reward += -0.05 * dist_h
+
+        # yatay hız cezası
+        reward += -0.03 * v_h
+
+        # yere yakın dikey hız cezası
+        if vy < 0.0 and dy < 15.0:
+            reward += -0.05 * abs(vy) / (dy + 1.0)
+
+        # stabilite: terminal değilse bile up_y düşükken ceza ver
+        if up_y < 0.85:
+            reward += -0.10 * (0.85 - up_y)
+        else:
+            reward += 0.04 * up_y
+
+        # küçük spin cezası
+        reward += -0.01 * w_mag
+
+        if self.step_count >= self.max_steps:
+            self.termination_reason = "TimeLimit"
+            return reward - 60.0, True
+
+        return reward, False
 
 
         # --- 3. ADIM BAŞI ÖDÜL/CEZA (SHAPING) ---
