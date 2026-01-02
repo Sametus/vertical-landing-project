@@ -121,8 +121,10 @@
 
 **ÖNEMLİ NOTLAR:**
 - `compute_reward_done()` raw state kullanmaya devam ediyor (reward hesaplaması için doğru)
-- `step()` ve `readStates()` normalize edilmiş state döndürüyor
-- **LOGLARDA NORMALIZE EDİLMİŞ STATE'LER GÖRÜNECEK**: STATE_LOG_FILE, DETAILED_LOG_FILE ve konsol çıktılarında normalize edilmiş değerler (`[-1, 1]` aralığında) görünecek, raw değerler değil
+- `step()` ve `readStates()` raw state döndürüyor (loglar için)
+- Normalize işlemi `train_main.py` içinde agent'a gönderilmeden önce yapılıyor
+- **LOGLARDA RAW STATE'LER GÖRÜNECEK**: STATE_LOG_FILE, DETAILED_LOG_FILE ve konsol çıktılarında raw değerler (gerçek fiziksel değerler) görünecek
+- Normalize edilmiş state'ler sadece agent'a gönderilirken kullanılıyor
 - Log-compress yöntemi: Düşük değerler hassas kalır, yüksek değerler aşırı saturate olmaz
 - Detaylı tartışma için `state_normalization_discussion.txt` dosyasına bakın
 

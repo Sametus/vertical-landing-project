@@ -116,11 +116,12 @@ if __name__ == "__main__":
 
     # İlk Reset
     enviroment.initialStart()
-    state = as_float32(enviroment.readStates())
+    state_raw = as_float32(enviroment.readStates())
+    state_norm = as_float32(enviroment.normalize_state(state_raw))
     
     # --- BAŞLANGIÇ KOŞULLARINI KAYDET (Start Conditions) ---
-    start_alt = state[1] 
-    start_dist = np.sqrt(state[0]**2 + state[2]**2)
+    start_alt = state_raw[1]  # Raw state loglar için
+    start_dist = np.sqrt(state_raw[0]**2 + state_raw[2]**2)
     # -------------------------------------------------------
 
     for up in range(start_update, TOTAL_UPDATES):
@@ -132,18 +133,20 @@ if __name__ == "__main__":
         values = np.zeros((ROLLOUT_LEN,), dtype=np.float32)
 
         for t in range(ROLLOUT_LEN):
-            action, logp, value = ajan.act(state)
-            next_state, done, reward = enviroment.step(action)
+            action, logp, value = ajan.act(state_norm)  # Agent normalize state kullanır
+            next_state_raw, done, reward = enviroment.step(action)
 
             # --- 1. DETAYLI ADIM LOGU (State & Actions) ---
             # Her adımı kaydeder: Ne yaptı? (Thrust, Pitch) -> Ne Oldu? (dy, dx, vy)
+            # LOGLAR RAW STATE KULLANIR
             with open(STATE_LOG_FILE, "a", encoding="utf-8") as f:
                 thrust_val = (action[2] + 1) / 2 # Normalize (0-1 arası okumak için)
                 pitch_cmd = action[0]
                 # Format: up, ep, step, dy(yükseklik), dx(konum), vy(hız), thrust, pitch, reward
-                f.write(f"{up},{episode},{t},{state[1]:.2f},{state[0]:.2f},{state[4]:.2f},{thrust_val:.2f},{pitch_cmd:.2f},{reward:.3f}\n")
+                f.write(f"{up},{episode},{t},{state_raw[1]:.2f},{state_raw[0]:.2f},{state_raw[4]:.2f},{thrust_val:.2f},{pitch_cmd:.2f},{reward:.3f}\n")
 
-            states[t] = state
+            # Agent training için normalize edilmiş state sakla
+            states[t] = state_norm
             actions[t] = action
             old_logps[t] = logp
             rewards[t] = reward
@@ -152,7 +155,10 @@ if __name__ == "__main__":
 
             ep_return += reward
             ep_len += 1
-            state = as_float32(next_state)
+            
+            # Raw ve normalize state'leri güncelle
+            state_raw = as_float32(next_state_raw)
+            state_norm = as_float32(enviroment.normalize_state(state_raw))
 
             if done:
                 episode += 1
@@ -160,9 +166,10 @@ if __name__ == "__main__":
                 
                 # --- SONUÇ ANALİZİ (Post-Mortem) ---
                 # Bölüm bittiğinde roketin son durumu neydi?
-                final_alt = state[1]
-                final_dist = np.sqrt(state[0]**2 + state[2]**2)
-                final_vel = state[4] # Yere çarpma hızı (vy)
+                # LOGLAR RAW STATE KULLANIR
+                final_alt = state_raw[1]
+                final_dist = np.sqrt(state_raw[0]**2 + state_raw[2]**2)
+                final_vel = state_raw[4] # Yere çarpma hızı (vy)
                 
                 # --- TEMİZ KONSOL ÇIKTISI ---
                 # Örnek: [EP 10] Crash | Ret: -500 | Start: 40m/5m | End: 0m/12m | Vel: -9.5
@@ -189,17 +196,18 @@ if __name__ == "__main__":
 
                 # --- YENİ BÖLÜM ---
                 enviroment.initialStart()
-                state = as_float32(enviroment.readStates())
+                state_raw = as_float32(enviroment.readStates())
+                state_norm = as_float32(enviroment.normalize_state(state_raw))
                 
-                # Yeni başlangıç şartlarını al
-                start_alt = state[1]
-                start_dist = np.sqrt(state[0]**2 + state[2]**2)
+                # Yeni başlangıç şartlarını al (RAW STATE)
+                start_alt = state_raw[1]
+                start_dist = np.sqrt(state_raw[0]**2 + state_raw[2]**2)
                 
                 ep_return = 0.0
                 ep_len = 0
 
-        # PPO Update Loop
-        s_tf = tf.convert_to_tensor(state[None, :], dtype=tf.float32)
+        # PPO Update Loop (normalize edilmiş state kullan)
+        s_tf = tf.convert_to_tensor(state_norm[None, :], dtype=tf.float32)
         _, v_tf = ajan.model(s_tf)
         last_value = float(tf.squeeze(v_tf, axis=0).numpy()[0])
 

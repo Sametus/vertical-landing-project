@@ -272,11 +272,8 @@ class Env():
 
         self.done = bool(done)
         
-        # State'leri normalize et (agent'a gönderilecek)
-        states_norm = self.normalize_state(states)
-        
-        # Sıralama senin kodundaki gibi: State (normalize), Done, Reward
-        return states_norm.tolist(), self.done, float(reward_step)
+        # Raw state döndür (loglar için). Normalize işlemi train_main.py'de yapılacak
+        return states.tolist(), self.done, float(reward_step)
     
 
     def initialStart(self):
@@ -293,8 +290,7 @@ class Env():
 
     def readStates(self):
         states = self.parse_states(self.con.readCs())
-        states_norm = self.normalize_state(states)
-        return states_norm.tolist()
+        return states.tolist()
 
     
 
