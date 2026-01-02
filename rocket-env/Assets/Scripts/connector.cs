@@ -98,6 +98,7 @@ namespace Assets.Scripts
         {
             if (mesajVar)
             {
+                Debug.Log($"Update: Mesaj alındı: {gelenMesaj}");
                 envScript.doAction(gelenMesaj);
                 Physics.Simulate(Time.fixedDeltaTime);
                 gonderilecekDurum = envScript.getStates();

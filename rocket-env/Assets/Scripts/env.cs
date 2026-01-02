@@ -74,7 +74,12 @@ namespace Assets.Scripts
                         float thrust = ParseFloat(parts[3]);
                         float roll = ParseFloat(parts[4]);
 
+                        Debug.Log($"doAction case 0: pitch={pitch}, yaw={yaw}, thrust={thrust}, roll={roll}");
                         ApplyPhysics(pitch, yaw, thrust, roll);
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"doAction case 0: parts.Length={parts.Length}, expected >= 5");
                     }
                     break;
             }
@@ -90,8 +95,15 @@ namespace Assets.Scripts
 
         private void ApplyPhysics(float pitch, float yaw, float thrust, float roll)
         {
+            if (rocketRb == null)
+            {
+                Debug.LogError("rocketRb is NULL!");
+                return;
+            }
+
             float motorGucu = Mathf.Clamp01(thrust);
-            rocketRb.AddRelativeForce(Vector3.up * motorGucu * mainThrustPower);
+            Vector3 thrustForce = Vector3.up * motorGucu * mainThrustPower;
+            rocketRb.AddRelativeForce(thrustForce);
 
             // Pitch: X ekseni (transform.right) - öne/arkaya yatma
             // Yaw: Z ekseni (transform.forward) - sağa/sola yatma  
@@ -99,8 +111,11 @@ namespace Assets.Scripts
             Vector3 pitchTork = transform.right * pitch * rcsPower;
             Vector3 yawTork = transform.forward * yaw * rcsPower;
             Vector3 rollTork = transform.up * roll * rcsPower;
+            Vector3 totalTorque = pitchTork + yawTork + rollTork;
 
-            rocketRb.AddTorque(pitchTork + yawTork + rollTork);
+            rocketRb.AddTorque(totalTorque);
+
+            Debug.Log($"ApplyPhysics: pitch={pitch:F3}, yaw={yaw:F3}, thrust={thrust:F3}, roll={roll:F3} | ThrustForce={thrustForce.magnitude:F1} | Torque={totalTorque.magnitude:F1}");
         }
 
         // connector.cs ilet
