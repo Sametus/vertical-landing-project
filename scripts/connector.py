@@ -20,8 +20,9 @@ class Connector():
         state'in tamamını okumak için timeout ve buffer mekanizması kullanır.
         State formatı: dx,dy,dz,vx,vy,vz,wx,wy,wz,qx,qy,qz,qw (13 değer, 12 virgül)
         """
+        print("Unity'den state bekleniyor...")
         buffer = b""
-        self.sock.settimeout(2.0)  # 2 saniye timeout
+        self.sock.settimeout(5.0)  # 5 saniye timeout (Unity Update() için zaman tanı)
         
         max_iterations = 50  # Maksimum okuma döngüsü
         iteration = 0
@@ -62,4 +63,5 @@ class Connector():
         if not message:
             raise ValueError("Unity'den boş state alındı")
         
+        print(f"State alındı: {len(message)} karakter, {message.count(',')} virgül")
         return message

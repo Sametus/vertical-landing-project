@@ -185,8 +185,9 @@ class Env():
         
         roll = float(action[3])  # Roll kontrolü
 
-        # Unity'e gönder
-        self.con.sendCs((0, pitch, yaw, thrust, roll, 0, 0, 0, 0, 0, 0, 0, 0))  
+        # Unity'e gönder (sadece gerekli parametreler: mode, pitch, yaw, thrust)
+        # NOT: Unity şu anda roll parametresini beklemiyor, sadece pitch, yaw, thrust
+        self.con.sendCs((0, pitch, yaw, thrust))  
         
         # Unity'den gelen yeni durumu oku
         states = self.parse_states(self.con.readCs())
@@ -216,7 +217,9 @@ class Env():
         pitch = np.random.uniform(self.init_pitch_min, self.init_pitch_max)
         yaw = np.random.uniform(self.init_yaw_min, self.init_yaw_max)
 
-        self.con.sendCs((1,x,y,z,pitch,yaw,0,0,0,0,0,0,0,0))
+        # Unity sadece 6 parametre bekliyor: mode, x, y, z, pitch, yaw
+        print(f"Reset gönderiliyor: mode=1, x={x:.2f}, y={y:.2f}, z={z:.2f}, pitch={pitch:.2f}, yaw={yaw:.2f}")
+        self.con.sendCs((1, x, y, z, pitch, yaw))
 
     def readStates(self):
         states = self.parse_states(self.con.readCs())
