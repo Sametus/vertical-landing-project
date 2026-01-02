@@ -32,6 +32,56 @@ class Env():
         self.init_pitch_max = 2.0
         self.init_yaw_min = -2.0
         self.init_yaw_max = 2.0
+        
+        # State normalizasyon ölçekleri (log-compress için)
+        # Konuşma bazlı: state_normalization_discussion.txt
+        self.dx_scale = 45.0  # Yatay pozisyon limiti
+        self.dy_scale = 50.0  # Yükseklik ölçeği
+        self.v_scale = 25.0   # Doğrusal hız ölçeği (m/s)
+        self.w_scale = 4.0    # Açısal hız ölçeği (rad/s)
+
+    def log_norm(self, x, scale):
+        """
+        Log-compress normalizasyon: np.clip(np.sign(x) * np.log1p(abs(x)/scale), -1.0, 1.0)
+        Düşük değerler hassas kalır, yüksek değerler aşırı saturate olmaz.
+        """
+        return np.clip(np.sign(x) * np.log1p(np.abs(x) / scale), -1.0, 1.0)
+    
+    def normalize_state(self, states):
+        """
+        State normalizasyonu: Agent'a gönderilen state'leri normalize eder.
+        State format: [dx, dy, dz, vx, vy, vz, wx, wy, wz, qx, qy, qz, qw]
+        
+        Normalizasyon stratejisi:
+        - dx, dz: Basit normalize (/45)
+        - dy: Log-compress (scale=50)
+        - vx, vy, vz: Log-compress (scale=25 m/s)
+        - wx, wy, wz: Log-compress (scale=4 rad/s)
+        - qx, qy, qz, qw: Zaten [-1, 1] aralığında, dokunma
+        """
+        states_norm = states.copy().astype(np.float32)
+        
+        # Pozisyon: dx, dz -> basit normalize
+        states_norm[0] = np.clip(states[0] / self.dx_scale, -1.0, 1.0)  # dx
+        states_norm[2] = np.clip(states[2] / self.dx_scale, -1.0, 1.0)  # dz
+        
+        # Yükseklik: dy -> log-compress
+        states_norm[1] = self.log_norm(states[1], self.dy_scale)  # dy (sadece pozitif, ama sign korunur)
+        
+        # Doğrusal hız: vx, vy, vz -> log-compress
+        states_norm[3] = self.log_norm(states[3], self.v_scale)  # vx
+        states_norm[4] = self.log_norm(states[4], self.v_scale)  # vy
+        states_norm[5] = self.log_norm(states[5], self.v_scale)  # vz
+        
+        # Açısal hız: wx, wy, wz -> log-compress
+        states_norm[6] = self.log_norm(states[6], self.w_scale)  # wx
+        states_norm[7] = self.log_norm(states[7], self.w_scale)  # wy
+        states_norm[8] = self.log_norm(states[8], self.w_scale)  # wz
+        
+        # Quaternion: qx, qy, qz, qw -> zaten normalize, dokunma
+        # states_norm[9:13] = states[9:13]  # Değişiklik yok
+        
+        return states_norm
 
     def parse_states(self,s:str):
         s = s.strip().replace('\n', '').replace('\r', '')
@@ -222,8 +272,11 @@ class Env():
 
         self.done = bool(done)
         
-        # Sıralama senin kodundaki gibi: State, Done, Reward
-        return states.tolist(), self.done, float(reward_step)
+        # State'leri normalize et (agent'a gönderilecek)
+        states_norm = self.normalize_state(states)
+        
+        # Sıralama senin kodundaki gibi: State (normalize), Done, Reward
+        return states_norm.tolist(), self.done, float(reward_step)
     
 
     def initialStart(self):
@@ -240,7 +293,8 @@ class Env():
 
     def readStates(self):
         states = self.parse_states(self.con.readCs())
-        return states.tolist()
+        states_norm = self.normalize_state(states)
+        return states_norm.tolist()
 
     
 
