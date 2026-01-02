@@ -47,4 +47,19 @@
 
 **Not:** Unity henüz roll kontrolünü desteklemiyor. Roll desteği eklendiğinde Unity tarafı da güncellenmeli.
 
+#### 2025-01-XX - Roll Kontrolü Eklendi (4 Action)
+
+**Dosyalar:** `rocket-env/Assets/Scripts/env.cs`, `scripts/env.py`
+
+**Değişiklik:**
+- Unity'de `ApplyPhysics()` metoduna roll parametresi eklendi
+- Unity'de doAction() case 0: 4 parametre yerine 5 parametre bekliyor (mode, pitch, yaw, thrust, roll)
+- Python'da step() fonksiyonu artık 4 parametre gönderiyor (mode, pitch, yaw, thrust, roll)
+- Roll kontrolü transform.up ekseninde tork uyguluyor
+
+**Etki:**
+- Agent artık 4 action kontrolü yapabiliyor (pitch, yaw, thrust, roll)
+- Roket kendi ekseni etrafında dönebilir (roll)
+- Daha fazla kontrol özgürlüğü
+
 ---

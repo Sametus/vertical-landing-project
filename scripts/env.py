@@ -185,10 +185,9 @@ class Env():
         
         roll = float(action[3])  # Roll kontrolü
 
-        # Unity'e gönder (sadece gerekli parametreler: mode, pitch, yaw, thrust)
-        # NOT: Unity şu anda roll parametresini beklemiyor, sadece pitch, yaw, thrust
-        print(f"Step {self.step_count}: Action gönderiliyor - pitch={pitch:.3f}, yaw={yaw:.3f}, thrust={thrust:.3f}")
-        self.con.sendCs((0, pitch, yaw, thrust))  
+        # Unity'e gönder (5 parametre: mode, pitch, yaw, thrust, roll)
+        print(f"Step {self.step_count}: Action gönderiliyor - pitch={pitch:.3f}, yaw={yaw:.3f}, thrust={thrust:.3f}, roll={roll:.3f}")
+        self.con.sendCs((0, pitch, yaw, thrust, roll))  
         
         # Unity'den gelen yeni durumu oku
         states = self.parse_states(self.con.readCs())

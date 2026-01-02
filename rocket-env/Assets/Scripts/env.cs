@@ -67,13 +67,14 @@ namespace Assets.Scripts
                     break;
 
                 case 0:
-                    if (parts.Length >= 4)
+                    if (parts.Length >= 5)
                     {
                         float pitch = ParseFloat(parts[1]);
                         float yaw = ParseFloat(parts[2]);
                         float thrust = ParseFloat(parts[3]);
+                        float roll = ParseFloat(parts[4]);
 
-                        ApplyPhysics(pitch, yaw, thrust);
+                        ApplyPhysics(pitch, yaw, thrust, roll);
                     }
                     break;
             }
@@ -87,14 +88,19 @@ namespace Assets.Scripts
             return 0.0f;
         }
 
-        private void ApplyPhysics(float pitch, float yaw, float thrust)
+        private void ApplyPhysics(float pitch, float yaw, float thrust, float roll)
         {
             float motorGucu = Mathf.Clamp01(thrust);
             rocketRb.AddRelativeForce(Vector3.up * motorGucu * mainThrustPower);
 
-            Vector3 tork = (transform.right * pitch * rcsPower) + (transform.up * yaw * rcsPower);
+            // Pitch: X ekseni (transform.right) - öne/arkaya yatma
+            // Yaw: Z ekseni (transform.forward) - sağa/sola yatma  
+            // Roll: Y ekseni (transform.up) - kendi ekseninde dönme
+            Vector3 pitchTork = transform.right * pitch * rcsPower;
+            Vector3 yawTork = transform.forward * yaw * rcsPower;
+            Vector3 rollTork = transform.up * roll * rcsPower;
 
-            rocketRb.AddTorque(tork);
+            rocketRb.AddTorque(pitchTork + yawTork + rollTork);
         }
 
         // connector.cs ilet
