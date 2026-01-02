@@ -166,10 +166,11 @@ if __name__ == "__main__":
                 
                 # --- TEMİZ KONSOL ÇIKTISI ---
                 # Örnek: [EP 10] Crash | Ret: -500 | Start: 40m/5m | End: 0m/12m | Vel: -9.5
+                # Format: Start: [Dikey (Alt)] / [Yatay (Dist)], End: [Dikey (Alt)] / [Yatay (Dist)]
                 
                 log_str = f"[EP {episode:<5}] {reason:<12} | Ret: {ep_return:>7.1f} | "
                 log_str += f"Start: {start_alt:>4.1f}m / {start_dist:>4.1f}m | "
-                log_str += f"End: {final_dist:>4.1f}m (Dist) | Vel: {final_vel:>5.1f} m/s"
+                log_str += f"End: {final_alt:>4.1f}m / {final_dist:>4.1f}m | Vel: {final_vel:>5.1f} m/s"
                 
                 # Başarılı ise YEŞİL yap, dikkat çeksin
                 if reason == "Success":
