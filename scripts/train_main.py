@@ -102,8 +102,7 @@ if __name__ == "__main__":
     # DETAYLI LOG BAŞLIĞI
     if not os.path.exists(DETAILED_LOG_FILE):
         with open(DETAILED_LOG_FILE, "w", encoding="utf-8") as f:
-            # Difficulty sütunu ekledim
-            f.write("Episode,Update,Return,Reason,StartAlt,StartDist,Difficulty\n")
+            f.write("Episode,Update,Return,Reason,StartAlt,StartDist,FinalDist,FinalVel\n")
             
     if not os.path.exists(STATE_LOG_FILE):
         with open(STATE_LOG_FILE, "w", encoding="utf-8") as f:
