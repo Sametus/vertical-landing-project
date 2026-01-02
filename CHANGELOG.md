@@ -89,4 +89,41 @@
 - Unity'de ayakların collider yapısı veya hiyerarşisi farklıysa kod uyarlanmalı
 - Eğer sorun çıkarsa `getStates()` metodunda `FindLowestLegPoint()` yerine eski `transform.TransformPoint(feetOffset)` kullanılabilir
 
+#### 2026-01-02 - State Normalizasyonu Eklendi (Log-compress Yöntemi)
+
+**Dosya:** `scripts/env.py`
+
+**Sorun:**
+- State'ler normalize edilmiyordu, raw değerler neural network'e gidiyordu
+- Farklı ölçeklerdeki state'ler (dx/dz: [-45, +45], dy: [0, 100], hızlar: farklı ölçekler) eğitimi zorlaştırıyordu
+- Büyük değerli özellikler (dy, hızlar) daha baskın görünebiliyordu
+
+**Çözüm:**
+- `normalize_state()` metodu eklendi
+- `log_norm()` fonksiyonu eklendi (log-compress normalizasyon)
+- State normalizasyon ölçekleri tanımlandı:
+  - `dx_scale = 45.0` (yatay pozisyon limiti)
+  - `dy_scale = 50.0` (yükseklik ölçeği)
+  - `v_scale = 25.0` (doğrusal hız ölçeği, m/s)
+  - `w_scale = 4.0` (açısal hız ölçeği, rad/s)
+
+**Normalizasyon Stratejisi:**
+- **dx, dz**: Basit normalize (`/45`) → `[-1, 1]`
+- **dy**: Log-compress (scale=50) → `[-1, 1]`
+- **vx, vy, vz**: Log-compress (scale=25 m/s) → `[-1, 1]`
+- **wx, wy, wz**: Log-compress (scale=4 rad/s) → `[-1, 1]`
+- **qx, qy, qz, qw**: Zaten `[-1, 1]` aralığında, dokunulmadı
+
+**Etki:**
+- Agent'a gönderilen state'ler artık normalize ediliyor
+- Eğitim daha stabil olmalı
+- Farklı ölçeklerdeki state'ler eşit ağırlıkta
+
+**ÖNEMLİ NOTLAR:**
+- `compute_reward_done()` raw state kullanmaya devam ediyor (reward hesaplaması için doğru)
+- `step()` ve `readStates()` normalize edilmiş state döndürüyor
+- **LOGLARDA NORMALIZE EDİLMİŞ STATE'LER GÖRÜNECEK**: STATE_LOG_FILE, DETAILED_LOG_FILE ve konsol çıktılarında normalize edilmiş değerler (`[-1, 1]` aralığında) görünecek, raw değerler değil
+- Log-compress yöntemi: Düşük değerler hassas kalır, yüksek değerler aşırı saturate olmaz
+- Detaylı tartışma için `state_normalization_discussion.txt` dosyasına bakın
+
 ---
