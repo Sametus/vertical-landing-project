@@ -1,0 +1,62 @@
+# Unity
+rocket-env/Library/
+rocket-env/Temp/
+rocket-env/obj/
+rocket-env/Logs/
+rocket-env/UserSettings/
+rocket-env/*.csproj
+rocket-env/*.sln
+rocket-env/*.suo
+rocket-env/*.user
+rocket-env/*.userprefs
+rocket-env/*.pidb
+rocket-env/*.booproj
+rocket-env/*.svd
+rocket-env/*.pdb
+rocket-env/*.mdb
+rocket-env/*.opendb
+rocket-env/*.VC.db
+rocket-env/Recordings/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Models (eğitim sonuçları - opsiyonel, isterseniz commit edebilirsiniz)
+# models/*.keras
+# models/*.pkl.gz
+# models/*.csv
+
+# IDE
+.vscode/
+.vs/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
