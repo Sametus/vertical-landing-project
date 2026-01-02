@@ -25,14 +25,20 @@ namespace Assets.Scripts
 
         public void ResetEnv(float x, float y, float z, float pitch, float yaw)
         {
+            if (rocketRb == null)
+            {
+                Debug.LogError("ResetEnv: rocketRb is NULL!");
+                return;
+            }
+
             rocketRb.linearVelocity = Vector3.zero;
             rocketRb.angularVelocity = Vector3.zero;
+            rocketRb.WakeUp(); // Rigidbody'yi uyandır
 
             transform.position = new Vector3(x, y, z);
-
             transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
 
-            Debug.Log("........ORTAM SIFIRLANDI..........");
+            Debug.Log($"........ORTAM SIFIRLANDI.......... Position: ({x:F2}, {y:F2}, {z:F2}) Rotation: ({pitch:F2}, {yaw:F2}, 0)");
         }
         public void doAction(string dataString)
         {
@@ -101,6 +107,9 @@ namespace Assets.Scripts
                 return;
             }
 
+            // Rigidbody'yi uyandır (sleep modunda olabilir)
+            rocketRb.WakeUp();
+
             float motorGucu = Mathf.Clamp01(thrust);
             Vector3 thrustForce = Vector3.up * motorGucu * mainThrustPower;
             rocketRb.AddRelativeForce(thrustForce);
@@ -115,7 +124,7 @@ namespace Assets.Scripts
 
             rocketRb.AddTorque(totalTorque);
 
-            Debug.Log($"ApplyPhysics: pitch={pitch:F3}, yaw={yaw:F3}, thrust={thrust:F3}, roll={roll:F3} | ThrustForce={thrustForce.magnitude:F1} | Torque={totalTorque.magnitude:F1}");
+            Debug.Log($"ApplyPhysics: pitch={pitch:F3}, yaw={yaw:F3}, thrust={thrust:F3}, roll={roll:F3} | ThrustForce={thrustForce.magnitude:F1} | Torque={totalTorque.magnitude:F1} | Mass={rocketRb.mass} | IsSleeping={rocketRb.IsSleeping()} | Velocity={rocketRb.linearVelocity.magnitude:F2}");
         }
 
         // connector.cs ilet
