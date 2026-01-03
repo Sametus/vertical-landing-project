@@ -137,7 +137,7 @@ class Env():
         # --- LANDING CHECK ---
         if dy <= 1.5:
             # zone: kare yerine daire daha stabil
-            in_zone = (dist_h < 3.0)  # sıkılaştırıldı: 4.0 → 3.0 (daha hassas iniş)
+            in_zone = (dist_h < 4.5)  # gevşetildi: 3.0 → 4.5 (low stage için daha fazla tolerans)
 
             if not in_zone:
                 self.termination_reason = "MissedZone"

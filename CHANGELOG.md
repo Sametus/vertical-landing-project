@@ -4,6 +4,29 @@
 
 ### Yapılan Değişiklikler
 
+#### 2026-01-XX - MissedZone Threshold Gevşetildi (Low Stage için Tolerans Artırıldı)
+
+**Dosya:** `scripts/env.py`
+
+**Sorun:**
+- MissedZone threshold 3.0m çok sıkıydı (max yatay genişlik 5m)
+- Agent düşük yükseklikte (≤5m) ve büyük mesafede (>3.0m) hiç Success deneyimleyemiyordu
+- Analiz sonucu: Düşük yükseklik + büyük mesafe kombinasyonunda 0% başarı
+- Agent "bu senaryo başarılabilir" sinyali alamıyordu
+
+**Çözüm:**
+- MissedZone threshold: 3.0m → 4.5m
+- Agent'a daha fazla tolerans verildi
+- Düşük yükseklik + büyük mesafe senaryolarında Success deneyimi sağlandı
+- Max yatay genişlik 5m olduğu için 4.5m mantıklı bir değer
+
+**Etki:**
+- Agent artık daha fazla Success durumu deneyimleyebilecek
+- Curriculum learning: Low stage'de gevşek, sonra sıkılaştırılabilir
+- Öğrenme hızlanması bekleniyor
+
+---
+
 #### 2026-01-XX - Reward Function Yeniden Tasarlandı (Hız Kontrolü ve Shaping İyileştirmeleri)
 
 **Dosya:** `scripts/env.py`
