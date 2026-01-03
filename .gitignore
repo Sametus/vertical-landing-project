@@ -43,10 +43,10 @@ wheels/
 .installed.cfg
 *.egg
 
-# Models (eğitim sonuçları - opsiyonel, isterseniz commit edebilirsiniz)
-# models/*.keras
-# models/*.pkl.gz
-# models/*.csv
+# Models (eğitim sonuçları - GitHub'a yüklenmeyecek)
+models/*.keras
+models/*.pkl.gz
+models/*.csv
 
 # IDE
 .vscode/
