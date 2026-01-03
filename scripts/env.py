@@ -121,9 +121,9 @@ class Env():
             self.termination_reason = "CeilingHit"
             return -1000.0, True  # Penalty 2x artırıldı: -500 → -1000
 
-        if abs(dx) >= 25.0 or abs(dz) >= 25.0:
+        if abs(dx) >= 30.0 or abs(dz) >= 30.0:  # Sınır genişletildi: 25m → 30m
             self.termination_reason = "OutOfBounds"
-            return -500.0, True
+            return -600.0, True  # Cezası artırıldı: -500 → -600
 
         # Tilt: low'da çok devrildiyse bitir
         if up_y < 0.35:
@@ -151,7 +151,7 @@ class Env():
             if ok_vy and ok_vh and ok_tilt and ok_spin:
                 bonus = (self.max_steps - self.step_count) * 0.1
                 self.termination_reason = "Success"
-                return 1500.0 + bonus, True
+                return 2000.0 + bonus, True  # Ödül artırıldı: 1500 → 2000
             else:
                 self.termination_reason = "Crash"
                 return -300.0, True
@@ -162,15 +162,21 @@ class Env():
         # YUKARI GİTME CEZASI (yukarı kaçmayı önle)
         if vy > 0.0:  # Yukarı gidiyorsa
             # İrtifa arttıkça artan penalty: dy=20m → küçük, dy=40m → büyük
-            up_penalty = 0.15 * vy * (dy / 20.0)  # dy=40m, vy=2 → ~0.6 ceza
+            up_penalty = 0.20 * vy * (dy / 20.0)  # Artırıldı: 0.15 → 0.20 (dy=40m, vy=2 → ~0.8 ceza)
             reward -= up_penalty
+        
+        # DİKEY UZAKLIK (YÜKSEKLİK) CEZASI (yüksekten başlamayı caydır)
+        # İrtifa arttıkça artan progressive ceza
+        if dy > 15.0:  # 15m üzeri için ceza
+            height_penalty = -0.03 * (dy - 15.0)  # dy=20m → -0.15, dy=30m → -0.45
+            reward += height_penalty
 
         # merkeze uzaklık cezası (artırıldı: drift sorununu çözmek için)
         # Progressive: mesafe arttıkça ceza artıyor
         if dist_h > 10.0:
-            reward += -0.05 * dist_h  # 10m üzeri: daha agresif ceza
+            reward += -0.08 * dist_h  # 10m üzeri: daha agresif ceza (artırıldı: -0.05 → -0.08)
         else:
-            reward += -0.03 * dist_h  # 10m altı: orta seviye ceza
+            reward += -0.05 * dist_h  # 10m altı: orta seviye ceza (artırıldı: -0.03 → -0.05)
 
         # yatay hız cezası (artırıldı: drift'i azaltmak için)
         reward += -0.06 * v_h
