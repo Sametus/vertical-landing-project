@@ -1,0 +1,158 @@
+================================================================================
+TRAINING ANALİZİ: Episode 1-343 (Update 1-100)
+================================================================================
+
+GENEL İSTATİSTİKLER:
+================================================================================
+- Toplam Episode: 343
+- Success: 10 episode (%2.9)
+- Crash: ~20 episode
+- MissedZone: ~150 episode
+- OutOfBounds: ~140 episode (artış trendi)
+- CeilingHit: ~20 episode (Update 50'den sonra başladı)
+- Spin: 2 episode (EP 342-343, son dönem)
+- TimeLimit: 2 episode
+- Tilted: 1 episode
+
+SUCCESS EPISODES:
+================================================================================
+EP 56   | Ret:  751.9 | Start: 4.8m / 2.4m | End: 1.5m / 2.3m | Vel: -2.5 m/s
+EP 60   | Ret:  768.3 | Start: 3.1m / 1.6m | End: 1.5m / 1.7m | Vel: -1.9 m/s
+EP 71   | Ret:  764.6 | Start: 3.2m / 2.7m | End: 1.5m / 2.8m | Vel: -1.8 m/s
+EP 99   | Ret:  777.7 | Start: 2.2m / 1.9m | End: 1.5m / 1.7m | Vel: -1.9 m/s
+EP 100  | Ret:  776.4 | Start: 2.3m / 1.6m | End: 1.5m / 1.6m | Vel: -1.0 m/s
+EP 123  | Ret:  785.0 | Start: 1.7m / 2.1m | End: 1.5m / 2.1m | Vel: -1.1 m/s
+EP 150  | Ret:  738.1 | Start: 6.4m / 0.7m | End: 1.5m / 0.4m | Vel: -1.9 m/s
+EP 153  | Ret:  776.2 | Start: 2.4m / 3.1m | End: 1.5m / 3.0m | Vel: -1.3 m/s
+EP 163  | Ret:  768.2 | Start: 2.9m / 2.8m | End: 1.5m / 2.8m | Vel: -1.9 m/s
+EP 190  | Ret:  770.8 | Start: 2.5m / 1.3m | End: 1.5m / 1.6m | Vel: -1.1 m/s
+
+Gözlem: Tüm Success'ler EP 56-190 arasında. Son 153 episode'da (EP 190+) HİÇ Success yok!
+
+LOSS TREND:
+================================================================================
+Update 10  | loss=207.8061  | ent=5.6899 | kl=0.0015
+Update 20  | loss=364.4316  | ent=5.6996 | kl=0.0050  ← Loss arttı!
+Update 30  | loss=289.2177  | ent=5.7064 | kl=0.0009
+Update 40  | loss=136.4037  | ent=5.7208 | kl=0.0047
+Update 50  | loss=5.0099    | ent=5.7560 | kl=0.0015  ← ÇOK DÜŞTÜ! (Overfitting?)
+Update 60  | loss=193.9284  | ent=5.7663 | kl=0.0004
+Update 70  | loss=260.2816  | ent=5.7767 | kl=0.0005
+Update 80  | loss=175.3422  | ent=5.7899 | kl=0.0007
+Update 90  | loss=238.1574  | ent=5.7989 | kl=0.0006
+Update 100 | loss=153.6744  | ent=5.8095 | kl=0.0005
+
+Sorun: Update 50'de loss çok düştü (5.0099) ama performans KÖTÜLEŞTİ!
+
+PERFORMANS DEĞİŞİMİ:
+================================================================================
+EP 1-100:   5 Success / 100 = %5.0
+EP 101-200: 3 Success / 100 = %3.0
+EP 201-300: 0 Success / 100 = %0.0  ← KÖTÜLEŞTİ!
+EP 301-343: 0 Success / 43  = %0.0
+
+Update 50 (EP 200 civarı) kritik nokta: Performans çöktü!
+
+YENİ TERMINATION REASONS (Update 50+):
+================================================================================
+- CeilingHit: Update 50'den sonra başladı (agent yukarı kaçmaya çalışıyor)
+- Spin: Update 100'den sonra başladı (agent kontrolü kaybediyor)
+- Tilted: 1 kez görüldü (EP 200)
+
+DRIFT SORUNU:
+================================================================================
+OutOfBounds sayısı:
+- EP 1-100:   ~20 episode
+- EP 101-200: ~30 episode
+- EP 201-300: ~80 episode  ← ÇOK ARTTI!
+- EP 301-343: ~30 episode (43 episode içinde)
+
+Agent drift'i önlemeyi öğrenemiyor, hatta kötüleşiyor!
+
+ENTROPY TREND:
+================================================================================
+Update 10:  ent=5.6899
+Update 100: ent=5.8095  ← ARTTI (exploration hâlâ yüksek)
+
+KL DIVERGENCE:
+================================================================================
+KL değerleri çok düşük (0.0004-0.0050):
+- Policy çok az değişiyor
+- Ama performans düşüyor
+- Bu "catastrophic forgetting" veya "policy collapse" olabilir
+
+KRİTİK SORUNLAR:
+================================================================================
+
+1. UPDATE 50 SONRASI PERFORMANS ÇÖKTÜ
+   - Loss çok düştü (5.0099) ama Success 0'a düştü
+   - Bu overfitting veya yanlış policy'ye yakınsama olabilir
+
+2. "YUKARI KAÇMA" DAVRANIŞI
+   - CeilingHit Update 50'den sonra başladı
+   - Agent reward exploit ediyor olabilir (yukarı kaçarak time penalty'den kurtulma)
+
+3. DRIFT KONTROLÜ KAYBOLDU
+   - OutOfBounds sayısı sürekli artıyor
+   - Agent yatay kontrolü öğrenemiyor
+
+4. SPIN SORUNLARI BAŞLADI
+   - EP 342-343'te Spin termination
+   - Roll kontrolü kaybolmuş olabilir
+
+5. SUCCESS PATTERN
+   - Tüm Success'ler düşük başlangıç mesafesi (1.7-6.4m)
+   - Agent sadece "kolay" senaryolarda başarılı
+   - Zor senaryolarda (10m+ start) hiç başarılı değil
+
+OLASI NEDENLER:
+================================================================================
+
+1. REWARD SHAPING SORUNU
+   - Agent yukarı kaçarak reward exploit ediyor
+   - CeilingHit penalty yeterli değil olabilir
+
+2. CURRICULUM LEARNING EKSİKLİĞİ
+   - Agent zor senaryolarda hiç başarılı değil
+   - Her zaman 5-15m arası başlangıç yapıyor, çeşitlilik yok
+
+3. POLICY COLLAPSE
+   - Update 50'de loss düştü ama policy kötü bir local minima'ya düştü
+   - KL divergence çok düşük, policy güncellenmiyor
+
+4. ACTION SPACE SORUNU
+   - Eksen düzeltmesi sonrası agent adapte olamadı
+   - Belki action space normalization sorunlu
+
+5. VALUE FUNCTION OVERESTIMATION
+   - Value loss patlaması görülmüyor ama value function yanlış öğrenmiş olabilir
+
+ÖNERİLER:
+================================================================================
+
+1. REWARD FUNCTION İNCELE
+   - CeilingHit penalty artır
+   - Yukarı kaçma davranışını daha sert cezalandır
+
+2. CURRICULUM LEARNING EKLE
+   - Başarı oranına göre zorluk artır
+   - Başlangıç yüksekliği çeşitlendir
+
+3. LEARNING RATE AYARLA
+   - Policy çok yavaş güncelleniyor (düşük KL)
+   - Learning rate artır veya PPO clip range ayarla
+
+4. EXPLORATION İNCELE
+   - Entropy hâlâ yüksek ama agent kötü policy'de takılı
+   - Belki exploration yetersiz veya yanlış yönde
+
+5. VALUE FUNCTION NORMALIZASYONU
+   - Value target'ları normalize et
+   - Value clipping ekle
+
+6. MODEL CHECKPOINT
+   - Update 40-50 arası model'i incele (en iyi performans)
+   - Update 50+ model'de ne değişti?
+
+================================================================================
+

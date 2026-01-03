@@ -116,10 +116,10 @@ class Env():
         w_mag  = (wx*wx + wy*wy + wz*wz) ** 0.5
 
         # --- TERMINAL ---
-        # Ceiling: low'da sadece yukarı kaçıyorsa bitir (daha mantıklı)
-        if dy >= 75.0 and vy > 0.5:
+        # Ceiling: Daha erken yakala ve çok sert cezalandır (yukarı kaçmayı önle)
+        if dy >= 50.0 and vy > 0.3:  # Threshold düşürüldü: 75→50, 0.5→0.3
             self.termination_reason = "CeilingHit"
-            return -500.0, True
+            return -1000.0, True  # Penalty 2x artırıldı: -500 → -1000
 
         if abs(dx) >= 25.0 or abs(dz) >= 25.0:
             self.termination_reason = "OutOfBounds"
@@ -158,6 +158,12 @@ class Env():
 
         # --- SHAPING ---
         reward += -0.02
+
+        # YUKARI GİTME CEZASI (yukarı kaçmayı önle)
+        if vy > 0.0:  # Yukarı gidiyorsa
+            # İrtifa arttıkça artan penalty: dy=20m → küçük, dy=40m → büyük
+            up_penalty = 0.15 * vy * (dy / 20.0)  # dy=40m, vy=2 → ~0.6 ceza
+            reward -= up_penalty
 
         # merkeze uzaklık cezası (azaltıldı: hız kontrolüne yer açmak için)
         reward += -0.02 * dist_h
