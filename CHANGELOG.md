@@ -4,6 +4,69 @@
 
 ### Yapılan Değişiklikler
 
+#### 2026-01-XX - Reward Function Yeniden Tasarlandı (Hız Kontrolü ve Shaping İyileştirmeleri)
+
+**Dosya:** `scripts/env.py`
+
+**Sorun:**
+- Vertical velocity penalty sadece `dy < 15m` iken aktifti, yüksek irtifada hız kontrolü yoktu
+- Agent serbest düşüş yapıp son anda fren yapmaya çalışıyordu
+- Reward scaling çok aggressive (0.1x) → shaping signal'lar görünmüyordu
+- Distance penalty çok dominant (0.05), hız kontrolüne yer bırakmıyordu
+- Horizontal velocity penalty yetersizdi (0.03), drift sorunu devam ediyordu
+- Success criteria çok gevşekti (vy <= 4.5 m/s), agent bunu bile tutturamıyordu
+- Tilt penalty/bonus dengesizdi (-0.10 vs +0.04)
+
+**Çözüm:**
+
+1. **Vertical Velocity - Her İrtifada Aktif (Progressive):**
+   - Artık tüm irtifalarda hız kontrolü var (sadece dy < 15m değil)
+   - Progressive penalty: İrtifa azaldıkça ceza artıyor
+   - Formula: `altitude_factor = 1.0 + (15.0 / (dy + 1.0))`
+   - Agent yüksek irtifada bile erken fren yapacak
+
+2. **Reward Scaling Artırıldı:**
+   - 0.1x → 0.5x (5x artış)
+   - Shaping signal'lar artık görünür olacak
+   - Agent intermediate reward'ları görebilecek
+
+3. **Distance Penalty Azaltıldı:**
+   - 0.05 → 0.02 (hız kontrolüne yer açmak için)
+
+4. **Horizontal Velocity Penalty Artırıldı:**
+   - 0.03 → 0.06 (drift'i azaltmak için, 2x)
+
+5. **Tilt Penalty/Bonus Dengelendi:**
+   - Penalty: -0.10 → -0.08
+   - Bonus: +0.04 → +0.08 (eşit ağırlıkta)
+
+6. **Yere Yaklaşma Bonusu Eklendi:**
+   - `dy < 20m` iken exponansiyel bonus
+   - Agent'ı inişe teşvik eder
+
+7. **Yavaş İniş Bonusu Eklendi:**
+   - `vy > -2 m/s` iken bonus
+   - Yumuşak inişi ödüllendirir
+
+8. **Success Criteria Sıkılaştırıldı:**
+   - `vy <= 4.5` → `2.5 m/s` (daha yumuşak iniş)
+   - `v_h <= 3.0` → `2.0 m/s` (daha kontrollü)
+   - `dist_h <= 4.0` → `3.0 m` (daha hassas iniş)
+
+**Etki:**
+- Agent artık yüksek irtifada bile hız kontrolü yapacak
+- Progressive penalty ile erken fren teşvik edilecek
+- Shaping signal'lar görünür olacak (0.5x scaling)
+- Yumuşak iniş bonusu ile daha kontrollü iniş
+- Multi-objective optimization daha dengeli çalışacak
+- Drift sorunu azalacak (horizontal velocity penalty 2x)
+
+**Notlar:**
+- İlk başta success rate düşük olabilir (daha sıkı criteria)
+- Progressive velocity penalty test edilmeli (hover davranışı riski)
+- Reward scaling artışı value loss patlaması riski taşır (ama 0.5x güvenli aralıkta)
+- Detaylı analiz için `reward_function_detailed_analysis.txt` dosyasına bakın
+
 #### 2025-01-XX - connector.py readCs() Metodu Düzeltildi
 
 **Dosya:** `scripts/connector.py`

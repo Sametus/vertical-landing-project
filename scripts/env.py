@@ -137,16 +137,16 @@ class Env():
         # --- LANDING CHECK ---
         if dy <= 1.5:
             # zone: kare yerine daire daha stabil
-            in_zone = (dist_h < 4.0)  # low gevşek: 4m
+            in_zone = (dist_h < 3.0)  # sıkılaştırıldı: 4.0 → 3.0 (daha hassas iniş)
 
             if not in_zone:
                 self.termination_reason = "MissedZone"
                 return -350.0, True
 
-            ok_vy   = (abs(vy) <= 4.5)   # low gevşek
-            ok_vh   = (v_h <= 3.0)       # kritik ek
-            ok_tilt = (up_y >= 0.85)     # kritik ek
-            ok_spin = (w_mag <= 4.0)     # kritik ek
+            ok_vy   = (abs(vy) <= 2.5)   # sıkılaştırıldı: 4.5 → 2.5 (daha yumuşak iniş)
+            ok_vh   = (v_h <= 2.0)       # sıkılaştırıldı: 3.0 → 2.0 (daha kontrollü)
+            ok_tilt = (up_y >= 0.85)     # aynı
+            ok_spin = (w_mag <= 4.0)     # aynı
 
             if ok_vy and ok_vh and ok_tilt and ok_spin:
                 bonus = (self.max_steps - self.step_count) * 0.1
@@ -159,24 +159,37 @@ class Env():
         # --- SHAPING ---
         reward += -0.02
 
-        # merkeze uzaklık cezası
-        reward += -0.05 * dist_h
+        # merkeze uzaklık cezası (azaltıldı: hız kontrolüne yer açmak için)
+        reward += -0.02 * dist_h
 
-        # yatay hız cezası
-        reward += -0.03 * v_h
+        # yatay hız cezası (artırıldı: drift'i azaltmak için)
+        reward += -0.06 * v_h
 
-        # yere yakın dikey hız cezası
-        if vy < 0.0 and dy < 15.0:
-            reward += -0.05 * abs(vy) / (dy + 1.0)
+        # VERTICAL VELOCITY: HER İRTİFADA AKTİF (PROGRESSIVE)
+        # Yüksek irtifada küçük ceza, düşük irtifada büyük ceza
+        if vy < 0.0:  # Aşağı düşüyorsa
+            # İrtifa azaldıkça artan penalty: dy=20m → ~0.5x, dy=5m → ~1.5x, dy=1.5m → ~2.0x
+            altitude_factor = 1.0 + (15.0 / (dy + 1.0))
+            reward -= 0.08 * abs(vy) * altitude_factor
 
-        # stabilite: terminal değilse bile up_y düşükken ceza ver
+        # stabilite: penalty ve bonus dengeli
         if up_y < 0.85:
-            reward += -0.10 * (0.85 - up_y)
+            reward += -0.08 * (0.85 - up_y)
         else:
-            reward += 0.04 * up_y
+            reward += 0.08 * (up_y - 0.85)  # Bonus eşit ağırlıkta
 
         # küçük spin cezası
         reward += -0.01 * w_mag
+        
+        # YERE YAKLAŞMA BONUSU (agent'ı inişe teşvik et)
+        if dy < 20.0:
+            approach_bonus = 0.05 * np.exp(-dy / 5.0)  # Max ~0.05
+            reward += approach_bonus
+        
+        # YAVAŞ İNİŞ BONUSU (vy > -2 m/s iken)
+        if vy < 0.0 and abs(vy) < 2.0:
+            slow_descent_bonus = 0.03 * (2.0 - abs(vy)) / 2.0  # Max ~0.03
+            reward += slow_descent_bonus
 
         if self.step_count >= self.max_steps:
             self.termination_reason = "TimeLimit"
@@ -265,9 +278,10 @@ class Env():
         reward_step, done = self.compute_reward_done(states)
         
         # --- KRİTİK EKLEME: REWARD SCALING ---
-        # Ödülü 10'a bölüyoruz. (+500 -> +50, -500 -> -50)
-        # Bu işlem Value Loss patlamasını önler ve eğitimi stabilize eder.
-        reward_step *= 0.1 
+        # Ödülü 2'ye bölüyoruz (0.1 → 0.5). (+500 -> +250, -500 -> -250)
+        # Shaping signal'ların görünür olması için scaling artırıldı.
+        # Value Loss patlaması riski düşük (0.5x güvenli aralıkta).
+        reward_step *= 0.5 
         # -------------------------------------
 
         self.done = bool(done)
