@@ -134,11 +134,15 @@ namespace Assets.Scripts
             //   roll  (Z): Kendi ekseninde dönme → transform.forward (Z ekseni) ✓
             // ÖNCEKİ KOD: yaw→forward, roll→up YANLIŞTI! DÜZELTİLDİ.
             
-            Vector3 pitchTork = transform.right * pitch * rcsPower;        // X ekseni → Pitch ✓
-            Vector3 yawTork   = transform.up * yaw * rcsPower;             // Y ekseni → Yaw ✓ (DÜZELTME: forward → up)
-            Vector3 rollTork  = transform.forward * roll * (rcsPower * 0.1f); // Z ekseni → Roll ✓ (DÜZELTME: up → forward)
+            // ROLL-PITCH COUPLING DÜZELTMESİ:
+            // AddRelativeTorque kullanarak roll dönmesinin pitch/yaw torklarına etkisini önlüyoruz
+            // Bu sayede roll yapıldığında pitch/yaw torklarının yönü değişmez
+            Vector3 pitchTork = Vector3.right * pitch * rcsPower;        // Local X ekseni → Pitch ✓
+            Vector3 yawTork   = Vector3.up * yaw * rcsPower;             // Local Y ekseni → Yaw ✓
+            Vector3 rollTork  = Vector3.forward * roll * (rcsPower * 0.1f); // Local Z ekseni → Roll ✓
 
-            rocketRb.AddTorque(pitchTork + yawTork + rollTork);
+            // AddRelativeTorque: Local space'de tork uygular, roll coupling'i otomatik handle eder
+            rocketRb.AddRelativeTorque(pitchTork + yawTork + rollTork);
 
             // Efekt Kodları Aynen Kalabilir
             if (mainEngineParticles != null)
