@@ -6,6 +6,7 @@ import pickle
 import warnings
 import numpy as np
 import tensorflow as tf
+from datetime import datetime
 warnings.filterwarnings("ignore")
 
 from agent import PPOAgent
@@ -174,16 +175,20 @@ if __name__ == "__main__":
                 # --- TEMİZ KONSOL ÇIKTISI ---
                 # Örnek: [EP 10] Crash | Ret: -500 | Start: 40m/5m | End: 0m/12m | Vel: -9.5
                 # Format: Start: [Dikey (Alt)] / [Yatay (Dist)], End: [Dikey (Alt)] / [Yatay (Dist)]
+                # PID ve timestamp eklendi: multiple instance'ları ayırt etmek için
+                pid = os.getpid()
+                timestamp = datetime.now().strftime("%H:%M:%S")
                 
-                log_str = f"[EP {episode:<5}] {reason:<12} | Ret: {ep_return:>7.1f} | "
+                log_str = f"[PID {pid}] [EP {episode:<5}] {reason:<12} | Ret: {ep_return:>7.1f} | "
                 log_str += f"Start: {start_alt:>4.1f}m / {start_dist:>4.1f}m | "
-                log_str += f"End: {final_alt:>4.1f}m / {final_dist:>4.1f}m | Vel: {final_vel:>5.1f} m/s"
+                log_str += f"End: {final_alt:>4.1f}m / {final_dist:>4.1f}m | Vel: {final_vel:>5.1f} m/s | {timestamp}"
                 
                 # Başarılı ise YEŞİL yap, dikkat çeksin
+                # flush=True: Buffer sorununu çözer, output hemen görünür
                 if reason == "Success":
-                    print(f"\033[92m{log_str}\033[0m") 
+                    print(f"\033[92m{log_str}\033[0m", flush=True) 
                 else:
-                    print(log_str)
+                    print(log_str, flush=True)
 
                 # 1. Özet CSV (Excel için)
                 with open(EP_LOG_FILE, "a", encoding="utf-8") as f:
@@ -217,7 +222,9 @@ if __name__ == "__main__":
             f.write(f"{up},{logs['loss']:.6f},{logs['policy_loss']:.6f},{logs['value_loss']:.6f},{logs['entropy']:.6f},{logs['kl']:.6f},{logs['clip_frac']:.6f}\n")
 
         if (up + 1) % 10 == 0:
-            print(f"[UP {up+1}] loss={logs['loss']:.4f} ent={logs['entropy']:.4f} kl={logs['kl']:.4f}")
+            pid = os.getpid()
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            print(f"[PID {pid}] [UP {up+1}] loss={logs['loss']:.4f} ent={logs['entropy']:.4f} kl={logs['kl']:.4f} | {timestamp}", flush=True)
 
         if (up + 1) % SAVE_EVERY_UPDATES == 0:
             print(f"[SAVE] Update {up+1}: Model kaydediliyor...")

@@ -127,14 +127,16 @@ namespace Assets.Scripts
             float motorGucu = Mathf.Clamp01(thrust);
             rocketRb.AddRelativeForce(Vector3.up * motorGucu * mainThrustPower);
 
-            // EKSENLERİ DOĞRU OTURTMA:
-            // transform.right   (X) -> PITCH (Öne arkaya yatma)
-            // transform.forward (Z) -> YAW (Sağa sola yatma)
-            // transform.up      (Y) -> ROLL (Kendi ekseninde dönme / Spin)
+            // UNITY EKSEN EŞLEŞMESİ (DÜZELTİLDİ):
+            // Quaternion.Euler(pitch, yaw, roll) sırası:
+            //   pitch (X): Öne-arkaya yatma → transform.right (X ekseni) ✓
+            //   yaw   (Y): Sağa-sola dönme → transform.up (Y ekseni) ✓
+            //   roll  (Z): Kendi ekseninde dönme → transform.forward (Z ekseni) ✓
+            // ÖNCEKİ KOD: yaw→forward, roll→up YANLIŞTI! DÜZELTİLDİ.
             
-            Vector3 pitchTork = transform.right * pitch * rcsPower;
-            Vector3 yawTork   = transform.forward * yaw * rcsPower;
-            Vector3 rollTork  = transform.up * roll * (rcsPower * 0.1f); // Artık roll çalışıyor
+            Vector3 pitchTork = transform.right * pitch * rcsPower;        // X ekseni → Pitch ✓
+            Vector3 yawTork   = transform.up * yaw * rcsPower;             // Y ekseni → Yaw ✓ (DÜZELTME: forward → up)
+            Vector3 rollTork  = transform.forward * roll * (rcsPower * 0.1f); // Z ekseni → Roll ✓ (DÜZELTME: up → forward)
 
             rocketRb.AddTorque(pitchTork + yawTork + rollTork);
 

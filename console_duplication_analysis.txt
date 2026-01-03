@@ -1,0 +1,76 @@
+================================================================================
+KONSOL ÇIKTISI DUPLICATION ANALİZİ
+================================================================================
+
+GÖZLEMLENEN SORUN:
+- Aynı episode numaraları birden fazla kez yazdırılıyor
+- Örnek: EP 17, 18, 19 birçok kez tekrar ediyor
+- "Bağlandı!" mesajı da birden fazla kez görünüyor
+
+OLASI NEDENLER:
+================================================================================
+
+1. MULTIPLE PYTHON INSTANCES:
+   - train_main.py birden fazla kez çalışıyor olabilir
+   - Her instance kendi episode counter'ı ile çalışıyor
+   - Konsola aynı anda yazıyorlar
+
+2. UNITY RECONNECTION:
+   - Unity bağlantısı kopup yeniden bağlanıyor
+   - Her bağlantıda episode counter sıfırlanmıyor
+   - Ama log mesajları karışıyor
+
+3. CONSOLE OUTPUT BUFFERING:
+   - Python print() buffer sorunları
+   - Aynı output birden fazla kez flush oluyor
+
+4. ENV.PY CONNECTION HANDLING:
+   - connector.py'de bağlantı yönetimi sorunlu olabilir
+   - Her reconnect'te yeni bir connection log'u yazılıyor
+
+================================================================================
+KOD İNCELEMESİ:
+================================================================================
+
+train_main.py'de:
+- Episode counter: `episode += 1` (satır 164)
+- Print: `print(log_str)` (satır 186)
+- Bu sadece `done` olduğunda çalışıyor
+
+Eğer birden fazla train_main.py instance'ı çalışıyorsa:
+- Her biri kendi episode counter'ı ile çalışır
+- Ama konsol çıktısı karışır
+
+"Bağlandı!" mesajı:
+- Bu muhtemelen connector.py veya env.py'den geliyor
+- Her reconnect'te yazılıyor
+
+================================================================================
+ÇÖZÜM:
+================================================================================
+
+1. PROCESS ID EKLE:
+   ```python
+   import os
+   pid = os.getpid()
+   log_str = f"[PID {pid}] [EP {episode:<5}] ..."
+   ```
+
+2. TIMESTAMP EKLE:
+   ```python
+   from datetime import datetime
+   timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+   log_str = f"[{timestamp}] [EP {episode:<5}] ..."
+   ```
+
+3. FLUSH PRINT:
+   ```python
+   print(log_str, flush=True)  # Buffer sorununu çöz
+   ```
+
+4. CONNECTION LOGGING KONTROL ET:
+   - connector.py veya env.py'de "Bağlandı!" logunu kontrol et
+   - Sadece ilk bağlantıda log yaz
+
+================================================================================
+
