@@ -137,11 +137,11 @@ class Env():
         # --- LANDING CHECK ---
         if dy <= 1.5:
             # zone: kare yerine daire daha stabil
-            in_zone = (dist_h < 4.5)  # gevşetildi: 3.0 → 4.5 (low stage için daha fazla tolerans)
+            in_zone = (dist_h < 6.0)  # daha da gevşetildi: 4.5 → 6.0 (normal inişleri başarı say)
 
             if not in_zone:
                 self.termination_reason = "MissedZone"
-                return -350.0, True
+                return -300.0, True  # ceza hafifletildi: -350 → -300 (çok sert değil)
 
             ok_vy   = (abs(vy) <= 2.5)   # sıkılaştırıldı: 4.5 → 2.5 (daha yumuşak iniş)
             ok_vh   = (v_h <= 2.0)       # sıkılaştırıldı: 3.0 → 2.0 (daha kontrollü)
@@ -165,8 +165,12 @@ class Env():
             up_penalty = 0.15 * vy * (dy / 20.0)  # dy=40m, vy=2 → ~0.6 ceza
             reward -= up_penalty
 
-        # merkeze uzaklık cezası (azaltıldı: hız kontrolüne yer açmak için)
-        reward += -0.02 * dist_h
+        # merkeze uzaklık cezası (artırıldı: drift sorununu çözmek için)
+        # Progressive: mesafe arttıkça ceza artıyor
+        if dist_h > 10.0:
+            reward += -0.05 * dist_h  # 10m üzeri: daha agresif ceza
+        else:
+            reward += -0.03 * dist_h  # 10m altı: orta seviye ceza
 
         # yatay hız cezası (artırıldı: drift'i azaltmak için)
         reward += -0.06 * v_h
