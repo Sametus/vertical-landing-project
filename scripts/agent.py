@@ -38,13 +38,16 @@ class PPOAgent:
         self.gae_lambda = 0.95
         self.clip_eps=0.1
         self.vf_coef=0.5
-        self.ent_coef = 0.01
+        self.ent_coef = 0.02  # Artırıldı: 0.01 → 0.02 (exploration teşvik etmek için)
         self.epochs = 4
         self.batch_size = 256
         self.max_grad_norm = 0.5
 
         self.model = self.build_model()
-        self.log_std = tf.Variable(-1.0*tf.ones((self.action_size), dtype=tf.float32),
+        # log_std başlangıç değeri artırıldı: -1.0 → 0.0 (daha fazla exploration)
+        # std = exp(0.0) = 1.0 (önceki: exp(-1.0) ≈ 0.37)
+        # Bu sayede agent daha fazla farklı action'lar deneyecek, symmetry sorunu çözülecek
+        self.log_std = tf.Variable(0.0*tf.ones((self.action_size), dtype=tf.float32),
                                    trainable=True,
                                    name="log_std",)
         self.opt = Adam(learning_rate = self.lr)
