@@ -21,8 +21,8 @@ namespace Assets.Scripts
         [Header("Effects")]
         public ParticleSystem mainEngineParticles;
 
-        public float mainThrustPower = 15000f;  // Düşey itki gücü artırıldı (10000 → 15000)
-        public float rcsPower = 1000f;
+        public float mainThrustPower = 20000f;  // Düşey itki gücü artırıldı (10000 → 15000)
+        public float rcsPower = 1200f;
 
         private Vector3 feetOffset = new Vector3(0, -2.0f, 0);
 
