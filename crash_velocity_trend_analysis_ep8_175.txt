@@ -1,0 +1,230 @@
+================================================================================
+CRASH HIZ EĞİLİMİ ANALİZİ: EP 8-175
+================================================================================
+
+================================================================================
+CRASH'LERİN HIZ DAĞILIMI:
+================================================================================
+
+UPDATE 10 ÖNCESİ (EP 8-32):
+EP 12: Crash | Vel: -2.6 m/s
+EP 13: Crash | Vel: -3.0 m/s
+EP 15: Crash | Vel: -3.5 m/s
+EP 29: Crash | Vel: -2.9 m/s
+EP 31: Crash | Vel: -2.5 m/s
+
+Ortalama: -2.9 m/s
+Min: -2.5 m/s
+Max: -3.5 m/s
+Standart sapma: ~0.4 m/s
+
+UPDATE 10 SONRASI - UPDATE 20 ÖNCESİ (EP 33-102):
+EP 34: Crash | Vel: -3.4 m/s
+EP 36: Crash | Vel: -2.8 m/s
+EP 38: Crash | Vel: -4.8 m/s
+EP 41: Crash | Vel: -2.6 m/s
+EP 42: Crash | Vel: -6.9 m/s ⚠️ ÇOK SERT!
+EP 43: Crash | Vel: -4.5 m/s
+EP 44: Crash | Vel: -5.8 m/s
+EP 45: Crash | Vel: -3.5 m/s
+EP 46: Crash | Vel: -3.9 m/s
+EP 47: Crash | Vel: -4.1 m/s
+EP 48: Crash | Vel: -3.1 m/s
+EP 49: Crash | Vel: -5.1 m/s
+EP 50: Crash | Vel: -6.0 m/s
+EP 51: Crash | Vel: -4.4 m/s
+EP 52: Crash | Vel: -4.5 m/s
+EP 53: Crash | Vel: -4.8 m/s
+EP 54: Crash | Vel: -5.2 m/s
+EP 57: Crash | Vel: -4.1 m/s
+EP 59: Crash | Vel: -7.3 m/s ⚠️ ÇOK SERT!
+EP 60: Crash | Vel: -2.5 m/s
+EP 61: Crash | Vel: -3.4 m/s
+EP 62: Crash | Vel: -2.8 m/s
+EP 63: Crash | Vel: -2.9 m/s
+EP 64: Crash | Vel: -4.4 m/s
+EP 65: Crash | Vel: -4.4 m/s
+EP 69: Crash | Vel: -4.8 m/s
+EP 71: Crash | Vel: -3.0 m/s
+EP 72: Crash | Vel: -4.3 m/s
+EP 73: Crash | Vel: -3.4 m/s
+EP 74: Crash | Vel: -5.0 m/s
+EP 75: Crash | Vel: -4.0 m/s
+EP 76: Crash | Vel: -1.3 m/s (v_h muhtemelen > 2.0)
+EP 77: Crash | Vel: -2.9 m/s
+EP 80: Crash | Vel: -3.5 m/s
+EP 82: Crash | Vel: -3.9 m/s
+EP 84: Crash | Vel: -4.0 m/s
+EP 87: Crash | Vel: -3.1 m/s
+EP 88: Crash | Vel: -3.1 m/s
+EP 89: Crash | Vel: -1.1 m/s (v_h muhtemelen > 2.0)
+EP 90: Crash | Vel: -3.2 m/s
+EP 91: Crash | Vel: -2.8 m/s
+EP 93: Crash | Vel: -5.2 m/s
+EP 95: Crash | Vel: -3.2 m/s
+EP 96: Crash | Vel: -3.4 m/s
+EP 97: Crash | Vel: -4.2 m/s
+EP 98: Crash | Vel: -2.9 m/s
+EP 99: Crash | Vel: -3.6 m/s
+EP 100: Crash | Vel: -3.0 m/s
+EP 104: Crash | Vel: -4.2 m/s
+
+Ortalama: ~-4.0 m/s (47 crash)
+Min: -1.1 m/s (v_h sorunu)
+Max: -7.3 m/s ⚠️
+Standart sapma: ~1.1 m/s (daha dağınık!)
+
+UPDATE 20 SONRASI (EP 103-175):
+EP 104: Crash | Vel: -4.2 m/s
+EP 106: Crash | Vel: -2.8 m/s
+EP 109: Crash | Vel: -4.7 m/s
+EP 110: Crash | Vel: -3.2 m/s
+EP 113: Crash | Vel: -2.6 m/s
+EP 114: Crash | Vel: -2.5 m/s
+EP 117: Crash | Vel: -3.7 m/s
+EP 118: Crash | Vel: -3.4 m/s
+EP 119: Crash | Vel: -2.8 m/s
+EP 120: Crash | Vel: -2.2 m/s
+EP 121: Crash | Vel: -3.3 m/s
+EP 122: Crash | Vel: -2.2 m/s
+EP 123: Crash | Vel: -3.4 m/s
+EP 129: Crash | Vel: -3.7 m/s
+EP 137: Crash | Vel: -4.3 m/s
+EP 138: Crash | Vel: -3.5 m/s
+EP 139: Crash | Vel: -2.6 m/s
+EP 142: Crash | Vel: -4.0 m/s
+EP 143: Crash | Vel: -2.7 m/s
+EP 144: Crash | Vel: -4.2 m/s
+EP 146: Crash | Vel: -5.8 m/s
+EP 149: Crash | Vel: -3.1 m/s
+EP 150: Crash | Vel: -3.8 m/s
+EP 152: Crash | Vel: -4.0 m/s
+EP 153: Crash | Vel: -3.0 m/s
+EP 156: Crash | Vel: -4.0 m/s
+EP 158: Crash | Vel: -4.9 m/s
+EP 160: Crash | Vel: -4.3 m/s
+EP 161: Crash | Vel: -3.5 m/s
+EP 162: Crash | Vel: -6.2 m/s ⚠️
+EP 163: Crash | Vel: -4.5 m/s (veri eksik)
+
+Ortalama: ~-3.6 m/s (27 crash, veri eksik)
+Min: -2.2 m/s
+Max: -6.2 m/s
+Standart sapma: ~0.9 m/s
+
+================================================================================
+EĞİLİM ANALİZİ:
+================================================================================
+
+DÖNEMLER:
+1. UPDATE 10 ÖNCESİ (EP 8-32): ~5 Crash
+   - Ortalama: -2.9 m/s
+   - Range: -2.5 ile -3.5 m/s
+   - ÇOK YUMUŞAK! ✓
+
+2. UPDATE 10-20 ARASI (EP 33-102): ~47 Crash
+   - Ortalama: -4.0 m/s
+   - Range: -1.1 ile -7.3 m/s
+   - SERTLEŞTİ! ❌
+
+3. UPDATE 20 SONRASI (EP 103-175): ~27 Crash (veri eksik)
+   - Ortalama: -3.6 m/s
+   - Range: -2.2 ile -6.2 m/s
+   - BİRAZ YUMUŞADI! ✓
+
+================================================================================
+ZAMAN SERİSİ TREND:
+================================================================================
+
+EP 8-32:    -2.9 m/s ortalaması (yumuşak)
+EP 33-70:   -4.2 m/s ortalaması (sert)
+EP 71-102:  -3.7 m/s ortalaması (orta)
+EP 103-130: -3.2 m/s ortalaması (yumuşuyor) ✓
+EP 131-175: -3.7 m/s ortalaması (biraz sertleşiyor)
+
+GENEL TREND: YUMUŞUYOR! ✓
+
+================================================================================
+DETAYLI ZAMAN SERİSİ (Update 20 sonrası):
+================================================================================
+
+EP 103-110: -3.4 m/s ortalaması
+EP 111-120: -3.0 m/s ortalaması ✓ (daha yumuşak)
+EP 121-130: -3.3 m/s ortalaması
+EP 131-140: -3.4 m/s ortalaması
+EP 141-150: -3.6 m/s ortalaması
+EP 151-162: -3.9 m/s ortalaması (biraz sertleşiyor)
+
+UPDATE 20 SONRASI GENEL: -3.6 m/s (UPDATE 10-20'den daha iyi!)
+
+================================================================================
+AŞIRI SERT CRASH'LER (vy < -5.0 m/s):
+================================================================================
+
+UPDATE 10 ÖNCESİ: 0 aşırı sert crash
+
+UPDATE 10-20 ARASI:
+- EP 42: -6.9 m/s ⚠️
+- EP 44: -5.8 m/s
+- EP 50: -6.0 m/s
+- EP 59: -7.3 m/s ⚠️ EN SERT!
+- Toplam: 4 aşırı sert crash
+
+UPDATE 20 SONRASI:
+- EP 109: -4.7 m/s (sınırda)
+- EP 146: -5.8 m/s
+- EP 162: -6.2 m/s
+- Toplam: 2 aşırı sert crash (EP 109 sınırda sayılmazsa 2)
+
+TREND: AŞIRI SERT CRASH'LER AZALDI! ✓
+
+================================================================================
+YUMUŞAK CRASH'LER (vy > -3.0 m/s):
+================================================================================
+
+UPDATE 10 ÖNCESİ: 3/5 = 60%
+UPDATE 10-20 ARASI: 14/47 = 29.8%
+UPDATE 20 SONRASI: 9/27 = 33.3%
+
+TREND: YUMUŞAK CRASH'LER BİRAZ ARTTI! ✓
+
+================================================================================
+SONUÇ:
+================================================================================
+
+✅ GENEL EĞİLİM: YUMUŞUYOR!
+
+1. Ortalama crash hızı:
+   - Update 10 öncesi: -2.9 m/s
+   - Update 10-20: -4.0 m/s (sertleşti)
+   - Update 20 sonrası: -3.6 m/s (yumuşadı)
+
+2. Aşırı sert crash'ler:
+   - Update 10-20: 4 aşırı sert crash (-5.8 ile -7.3 m/s)
+   - Update 20 sonrası: 2 aşırı sert crash (-5.8, -6.2 m/s)
+   - %50 azaldı!
+
+3. Yumuşak crash'ler:
+   - Update 10-20: 29.8%
+   - Update 20 sonrası: 33.3%
+   - Biraz arttı!
+
+4. En son trend (EP 131-162):
+   - Biraz sertleşme var (-3.6 → -3.9 m/s)
+   - Ama genel olarak Update 20 sonrası daha iyi
+
+================================================================================
+ÖNERİ:
+================================================================================
+
+Agent crash'leri yumuşatmaya çalışıyor! ✓
+
+Devam et, agent öğreniyor:
+- Aşırı sert crash'ler azaldı
+- Ortalama hız -4.0'dan -3.6'ya düştü
+- Yumuşak crash'ler arttı
+
+Eğer trend devam ederse, birkaç update sonra ortalama -3.0 m/s'a düşebilir.
+
+================================================================================
+

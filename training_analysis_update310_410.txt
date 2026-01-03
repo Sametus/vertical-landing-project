@@ -1,0 +1,316 @@
+================================================================================
+TRAINING ANALİZİ: Update 310-410 (Episode 1089-1406)
+================================================================================
+
+ARALIK: Update 310 → 410 (100 updates, ~317 episodes)
+ZAMAN: Terminal loglarına göre 22:05 - 22:27 (yaklaşık 22 dakika)
+
+================================================================================
+1. GENEL BAŞARI ORANLARI
+================================================================================
+
+Terminal çıktısından örnekleme:
+- Update 310-320: Çoğunlukla OutOfBounds, az Success
+- Update 320-340: CeilingHit artışı gözleniyor
+- Update 340-380: OutOfBounds dominant, Success nadir
+- Update 380-410: CeilingHit ve OutOfBounds kombinasyonu
+
+Tahmini başarı oranı: %8-12 (önceki dönemlerden daha düşük görünüyor)
+
+================================================================================
+2. TERMINATION REASON DAĞILIMI (Terminal Gözlemi)
+================================================================================
+
+Öne Çıkan Pattern'ler:
+1. OutOfBounds: EN DOMINANT (%60-70 tahmini)
+   - Update 310-330: Sürekli OutOfBounds
+   - Update 350-410: Yüksek hızla OutOfBounds
+   - Ortalama End distance: 25-35m (çok uzak)
+
+2. CeilingHit: CİDDİ ARTMIŞ (%15-20 tahmini)
+   - Update 312'de başlıyor (EP 1095: -825.3)
+   - Update 329, 330, 334, 363, 365-370, 372-374, 378, 383, 389, 390, 394-397, 399: Yoğun CeilingHit
+   - Vel değerleri: 7-15 m/s (çok hızlı yukarı hareket)
+   - Agent tavanı exploit ediyor gibi görünüyor
+
+3. MissedZone: Orta seviye (%10-15)
+   - FinalDist genelde 6-20m arası
+   - Bölge dışında ama yerde başarısız
+
+4. Crash: Düşük (%5-8)
+   - FinalVel genelde -2 ile -5 m/s
+   - Zone içinde ama hız/tilt problemi
+
+5. Success: NADİR (%5-10)
+   - Update 310: EP 1090, 1096 (iyi başlangıç)
+   - Update 315: EP 1104, 1105 (back-to-back success)
+   - Update 327-328: EP 1138, 1140, 1143-1145 (4 success cluster)
+   - Update 338: EP 1172, 1174
+   - Update 342-343: EP 1187, 1189, 1191, 1193
+   - Update 346-347: EP 1204-1207 (3 success cluster)
+   - Update 353: EP 1229, 1230
+   - Update 354: EP 1235-1238 (4 success cluster!)
+   - Update 355: EP 1239, 1240
+   - Update 376: EP 1306
+   - Update 392: EP 1352
+   - Update 402: EP 1382
+   - Update 408: EP 1402
+
+6. Tilted: Nadir (3-4 episode)
+   - EP 1231, 1276, 1302, 1316
+   - Agent kontrolü kaybediyor
+
+7. TimeLimit: Çok nadir (1-2 episode)
+   - EP 1166, 1407
+
+================================================================================
+3. LOSS TREND ANALİZİ
+================================================================================
+
+Update Log'larından (Update 310-410):
+
+DALGALANMA PATTERN:
+- Update 310: 2515.16 (çok yüksek!)
+- Update 311: 227.93 (ani düşüş)
+- Update 312: 1616.32 (yükseliş)
+- Update 315: 2201.59 (patlama)
+- Update 320: 145.65 (düşüş)
+- Update 321: 94.62 (en düşük seviye)
+- Update 322: 1406.31 (patlama)
+- Update 327: 2638.20 (büyük patlama)
+- Update 328: 3483.99 (EN BÜYÜK PATLAMA!)
+- Update 329: 467.90 (recovery)
+- Update 340: 174.54 (düşük)
+- Update 341: 329.71
+- Update 342: 2940.93 (BÜYÜK PATLAMA)
+- Update 343: 2676.77 (patlama devam)
+- Update 346: 1451.58 (yüksek)
+- Update 347: 2934.63 (BÜYÜK PATLAMA)
+- Update 353: 3133.43 (BÜYÜK PATLAMA)
+- Update 354: 4345.28 (EN BÜYÜK PATLAMA!)
+- Update 355: 1464.81 (recovery)
+- Update 360: 207.34
+- Update 370: 186.67
+- Update 380: 181.19
+- Update 390: 481.70
+- Update 400: 452.41
+- Update 408: 1538.40 (patlama)
+- Update 410: 161.18 (recovery)
+
+KRİTİK GÖZLEMLER:
+1. Çok sayıda BÜYÜK LOSS PATLAMASI:
+   - Update 328: 3483.99
+   - Update 342: 2940.93
+   - Update 347: 2934.63
+   - Update 353: 3133.43
+   - Update 354: 4345.28 (EN BÜYÜK!)
+   
+2. Pattern: Update 328, 342, 347, 353-354 → CEILINGHIT ARTARKEN LOSS PATLAMALARI
+
+3. Recovery var ama yavaş: Update 329, 355, 360, 370, 380, 410
+
+4. Loss coefficient of variation: ÇOK YÜKSEK (RL için normal ama bu seviyede endişe verici)
+
+================================================================================
+4. SUCCESS KALİTESİ ANALİZİ
+================================================================================
+
+Detaylı log'dan Success episode'ları:
+
+Update 310 (EP 1090, 1096):
+- EP 1090: Ret 747.8 | StartAlt 4.38m | StartDist 2.01m | FinalVel -1.08 m/s
+- EP 1096: Ret 753.8 | StartAlt 4.09m | StartDist 2.77m | FinalVel -1.22 m/s
+
+Update 315 (EP 1104, 1105):
+- EP 1104: Ret 769.1 | StartAlt 2.40m | StartDist 1.46m | FinalVel -1.50 m/s
+- EP 1105: Ret 779.9 | StartAlt 1.99m | StartDist 4.33m | FinalVel -1.09 m/s
+
+Update 327-328 (Cluster):
+- EP 1138: Ret 777.1 | StartAlt 2.09m | StartDist 4.58m | FinalVel -1.22 m/s
+- EP 1140: Ret 755.5 | StartAlt 3.63m | StartDist 0.85m | FinalVel -2.19 m/s
+- EP 1143: Ret 778.5 | StartAlt 2.11m | StartDist 3.43m | FinalVel -0.88 m/s ⭐
+- EP 1144: Ret 738.5 | StartAlt 5.41m | StartDist 3.80m | FinalVel -1.08 m/s
+- EP 1145: Ret 751.9 | StartAlt 3.28m | StartDist 5.32m | FinalVel -1.75 m/s
+
+Update 338 (EP 1172, 1174):
+- EP 1172: Ret 704.0 | StartAlt 8.62m | StartDist 5.02m | FinalVel -2.33 m/s
+- EP 1174: Ret 780.3 | StartAlt 2.12m | StartDist 4.70m | FinalVel -2.08 m/s
+
+Update 342-343 (Cluster):
+- EP 1187: Ret 718.1 | StartAlt 5.70m | StartDist 3.27m | FinalVel -1.95 m/s
+- EP 1189: Ret 782.5 | StartAlt 1.87m | StartDist 3.17m | FinalVel -1.27 m/s
+- EP 1191: Ret 777.9 | StartAlt 2.31m | StartDist 1.02m | FinalVel -1.34 m/s
+- EP 1193: Ret 765.8 | StartAlt 1.93m | StartDist 2.54m | FinalVel -1.41 m/s
+
+Update 346-347 (3 Success Cluster):
+- EP 1204: Ret 724.7 | StartAlt 5.39m | StartDist 3.97m | FinalVel -2.11 m/s
+- EP 1205: Ret 759.3 | StartAlt 3.44m | StartDist 3.86m | FinalVel -1.52 m/s
+- EP 1206: Ret 742.1 | StartAlt 4.35m | StartDist 4.78m | FinalVel -0.44 m/s ⭐⭐ (EN YUMUŞAK!)
+
+Update 353 (EP 1229, 1230):
+- EP 1229: Ret 773.8 | StartAlt 2.18m | StartDist 4.89m | FinalVel -0.42 m/s ⭐
+- EP 1230: Ret 729.5 | StartAlt 3.34m | StartDist 3.34m | FinalVel -2.08 m/s
+
+Update 354 (4 Success Cluster!):
+- EP 1235: Ret 759.7 | StartAlt 2.83m | StartDist 5.59m | FinalVel -2.35 m/s
+- EP 1236: Ret 745.6 | StartAlt 5.10m | StartDist 2.09m | FinalVel -1.64 m/s
+- EP 1237: Ret 766.7 | StartAlt 2.98m | StartDist 2.97m | FinalVel -1.39 m/s
+- EP 1238: Ret 755.6 | StartAlt 3.51m | StartDist 4.72m | FinalVel -1.16 m/s
+
+Update 355 (EP 1239, 1240):
+- EP 1239: Ret 755.6 | StartAlt 3.51m | StartDist 4.72m | FinalVel -1.16 m/s
+
+Update 376 (EP 1306):
+- EP 1306: Ret 779.9 | StartAlt 1.81m | StartDist 4.37m | FinalVel -1.01 m/s
+
+Update 392 (EP 1352):
+- EP 1352: Ret 766.5 | StartAlt 2.91m | StartDist 1.76m | FinalVel -0.55 m/s ⭐
+
+Update 402 (EP 1382):
+- EP 1382: Ret 767.4 | StartAlt 2.60m | StartDist 5.23m | FinalVel -1.85 m/s
+
+Update 408 (EP 1402):
+- EP 1402: Ret 752.1 | StartAlt 3.86m | StartDist 5.68m | FinalVel -1.75 m/s
+
+SUCCESS KALİTE TREND:
+- FinalVel ortalaması: ~-1.40 m/s (önceki dönemlerden daha iyi!)
+- En yumuşak iniş: EP 1206 (-0.44 m/s), EP 1229 (-0.42 m/s), EP 1352 (-0.55 m/s)
+- Success'ler cluster pattern gösteriyor (bir anda birkaç success)
+- Başarılı olanlar genelde düşük StartAlt (1.8-4.5m)
+- StartDist çeşitliliği var (0.85m - 5.68m)
+
+================================================================================
+5. CEILINGHIT PATTERN ANALİZİ
+================================================================================
+
+CeilingHit Episodes (Update 310-410):
+- EP 1095 (Update 312): Ret -825.3 | Vel 7.07 m/s
+- EP 1098 (Update 313): Ret -907.7 | Vel 9.20 m/s
+- EP 1147 (Update 329): Ret -811.3 | Vel 4.43 m/s
+- EP 1150 (Update 330): Ret -872.3 | Vel 8.89 m/s
+- EP 1159 (Update 334): Ret -794.2 | Vel 8.00 m/s
+- EP 1263 (Update 363): Ret -929.3 | Vel 7.12 m/s
+- EP 1271 (Update 365): Ret -801.3 | Vel 11.47 m/s ⚠️
+- EP 1274 (Update 366): Ret -803.0 | Vel 9.23 m/s
+- EP 1286 (Update 370): Ret -794.2 | Vel 13.22 m/s ⚠️⚠️
+- EP 1291 (Update 372): Ret -798.4 | Vel 11.71 m/s
+- EP 1294 (Update 373): Ret -845.9 | Vel 12.61 m/s
+- EP 1310 (Update 378): Ret -851.4 | Vel 11.21 m/s
+- EP 1311 (Update 378): Ret -780.8 | Vel 15.27 m/s ⚠️⚠️⚠️ (EN HIZLI!)
+- EP 1323 (Update 383): Ret -864.9 | Vel 10.62 m/s
+- EP 1325 (Update 383): Ret -822.6 | Vel 10.08 m/s
+- EP 1343 (Update 389): Ret -883.0 | Vel 8.97 m/s
+- EP 1346 (Update 390): Ret -805.9 | Vel 10.49 m/s
+- EP 1356 (Update 394): Ret -913.6 | Vel 13.37 m/s
+- EP 1357 (Update 394): Ret -853.8 | Vel 13.41 m/s
+- EP 1358 (Update 395): Ret -846.3 | Vel 13.19 m/s
+- EP 1364 (Update 397): Ret -802.6 | Vel 10.19 m/s
+- EP 1366 (Update 397): Ret -858.4 | Vel 9.23 m/s
+- EP 1371 (Update 399): Ret -835.9 | Vel 10.46 m/s
+- EP 1379 (Update 402): Ret -796.7 | Vel 13.97 m/s
+
+ÖNEMLİ GÖZLEMLER:
+1. Update 370+ sonrası Vel değerleri 10-15 m/s'ye çıkıyor (ÇOK TEHLİKELİ)
+2. Update 378'de back-to-back CeilingHit (EP 1310-1311)
+3. Update 394-395'te 3 CeilingHit cluster
+4. Agent yukarı kaçma stratejisi öğrenmiş gibi görünüyor
+5. CeilingHit sayısı ve hızları zamanla artıyor
+
+================================================================================
+6. OUTOFBOUNDS PATTERN ANALİZİ
+================================================================================
+
+OutOfBounds dominant termination:
+- End distance: Genelde 25-35m (çok uzak)
+- Vel: Çeşitli (bazen yukarı, bazen yatay drift)
+- Pattern: Agent hedef bölgeden çok uzaklaşıyor
+
+Örnekler:
+- EP 1091: End 27.6m | Vel 7.29 m/s (yukarı)
+- EP 1111: End 25.3m | Vel 2.09 m/s (yatay drift)
+- EP 1275: End 31.2m | Vel 12.10 m/s (çok hızlı)
+- EP 1320: End 29.9m | Vel 10.19 m/s
+
+Agent yatay kontrolü kaybetmiş görünüyor.
+
+================================================================================
+7. KRİTİK BULGULAR
+================================================================================
+
+✅ POZİTİF:
+1. Success'ler çok yumuşak (-0.44 ile -1.85 m/s arası)
+2. Success cluster'ları var (agent bazen "groove" buluyor)
+3. En iyi FinalVel: -0.44 m/s (EP 1206)
+
+⚠️ ENDİŞE VERİCİ:
+1. Çok yüksek OutOfBounds oranı (%60-70)
+2. CeilingHit sayısı ve hızları artıyor (10-15 m/s!)
+3. Loss patlamaları sık (Update 328, 342, 347, 353-354, 408)
+4. Agent "yukarı kaçma" stratejisi öğrenmiş olabilir
+5. Başarı oranı düşük (%8-12 tahmini)
+
+🚨 KRİTİK:
+- Update 354: Loss 4345.28 (EN BÜYÜK PATLAMA) + CeilingHit artışı
+- Update 370+: CeilingHit hızları 10-15 m/s'ye çıkıyor
+- Agent reward exploitation yapıyor olabilir (tavan cezası yeterli değil?)
+
+================================================================================
+8. ÖNERİLER
+================================================================================
+
+1. CEILINGHIT CEZASINI ARTIR:
+   - Şu anki ceza yeterli değil
+   - Vel > 10 m/s için ekstra progresif ceza
+   - Tavan yüksekliğini azalt (50m → 40m?)
+
+2. OUTOFBOUNDS CEZASINI ARTIR:
+   - Yatay drift için daha güçlü penalty
+   - Progressive penalty (dist > 20m için artan ceza)
+
+3. LOSS PATLAMALARI:
+   - Learning rate düşürmeyi düşün
+   - Gradient clipping ekle
+   - Update frequency azalt
+
+4. SUCCESS CLUSTER'LARI:
+   - Update 354'te 4 success cluster var
+   - Bu pattern'i daha sık görmek için reward shaping iyileştir
+
+5. MONİTÖR ET:
+   - CeilingHit oranı %20'yi geçerse training'i durdur
+   - Loss > 3000 ise checkpoint'e geri dön
+
+================================================================================
+9. SONUÇ
+================================================================================
+
+Update 310-410 aralığı KARMA:
+- ✅ Success kalitesi mükemmel (çok yumuşak inişler)
+- ⚠️ Başarı oranı düşük
+- 🚨 CeilingHit ve OutOfBounds dominant
+- 🚨 Loss patlamaları sık
+
+Agent "yukarı kaçma" stratejisi öğrenmiş gibi görünüyor. CeilingHit cezası ve tavan
+yüksekliği gözden geçirilmeli.
+
+En iyi başarılar: EP 1206 (-0.44 m/s), EP 1229 (-0.42 m/s), EP 1352 (-0.55 m/s)
+
+================================================================================
+KARŞILAŞTIRMA: Update 3-250 vs Update 310-410
+================================================================================
+
+Önceki Analiz (EP 3-907, Update 0-249):
+- Success Rate: %16.6
+- FinalVel (success): -1.91 → -1.57 m/s
+- Loss: Genel azalma trendi
+
+Şimdiki Analiz (EP 1089-1406, Update 310-410):
+- Success Rate: ~%8-12 (DÜŞMÜŞ)
+- FinalVel (success): ~-1.40 m/s (İYİLEŞMİŞ!)
+- Loss: Büyük patlamalar var (kötüleşmiş)
+- CeilingHit: Yeni problem (önceden yoktu)
+
+Agent kaliteli inişler yapabiliyor ama tutarlılık kaybetti.
+
+================================================================================
+

@@ -1,0 +1,71 @@
+================================================================================
+İLK TEST SONUÇLARI: Episode 1-16 (Roll-Pitch Coupling + CeilingHit Fix)
+================================================================================
+
+İSTATİSTİKLER:
+================================================================================
+- Toplam Episode: 16
+- Success: 1 (%6.25) - EP 7
+- Crash: 2 (%12.5)
+- MissedZone: 3 (%18.75)
+- OutOfBounds: 9 (%56.25)
+- CeilingHit: 1 (%6.25) - EP 4
+
+ÖNCEKİ DURUM İLE KARŞILAŞTIRMA:
+================================================================================
+- Önceki: İlk Success EP 56'da (56 episode sonra)
+- Şimdi: İlk Success EP 7'de (7 episode sonra)
+- İYİLEŞME: 8x daha hızlı ilk Success!
+
+CEILINGHIT FIX İŞE YARADI:
+================================================================================
+EP 4: CeilingHit | Ret: -782.2
+- Penalty çok büyük (-782.2, reward scaling sonrası ~-391)
+- Agent bunu öğrenmeli, CeilingHit azalmalı
+
+ÖNCEKİ CeilingHit cezası: -500 → -250 (0.5x scaling)
+ŞİMDİ CeilingHit cezası: -1000 → -500 (0.5x scaling)
+2x artış aktif, agent daha fazla ceza alıyor ✓
+
+OUTOFBOUNDS SORUNU DEVAM EDİYOR:
+================================================================================
+9/16 episode OutOfBounds (%56.25)
+- Drift kontrolü hala zayıf
+- Roll-pitch coupling düzeltmesi bu sorunu tam çözmemiş olabilir
+- Ama çok erken, daha fazla episode gerekli
+
+SUCCESS ANALİZİ:
+================================================================================
+EP 7: Success | Ret: 733.0 | Start: 6.9m / 2.2m | End: 1.5m / 1.7m | Vel: -1.6 m/s
+- Düşük başlangıç mesafesi (6.9m alt, 2.2m yatay)
+- Yumuşak iniş (-1.6 m/s)
+- Zone içi (1.7m yatay mesafe < 3.0m)
+
+ERKEN DEĞERLENDİRME:
+================================================================================
+
+✅ İYİ HABERLER:
+1. İlk Success çok daha erken (EP 7 vs EP 56)
+2. CeilingHit penalty aktif ve çalışıyor (-782.2)
+3. Roll-pitch coupling düzeltmesi etkili olabilir
+
+⚠️ DİKKAT:
+1. OutOfBounds hala çok yaygın (56%)
+2. Sadece 16 episode, daha fazla veri gerekli
+3. Model Update 100'den devam ediyor (kötü policy)
+
+ÖNERİ:
+================================================================================
+1. En az 50-100 episode bekle
+2. CeilingHit sayısını takip et (azalmalı)
+3. Success rate'i takip et (artmalı)
+4. Eğer 50 episode sonra hala çok OutOfBounds varsa:
+   - Update 40-50 model'e geri dön
+   - Veya reward shaping'i yeniden gözden geçir
+
+SONRAKI ADIM:
+================================================================================
+Training'e devam et, 50-100 episode sonra tekrar değerlendir.
+
+================================================================================
+

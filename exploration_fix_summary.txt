@@ -1,0 +1,35 @@
+================================================================================
+EXPLORATION SORUNU DÜZELTMESİ
+================================================================================
+
+SORUN:
+Agent hep aynı tarafa açı vererek yükseliyor (OutOfBounds)
+- Tüm episode'lar OutOfBounds
+- End positions: 25-40m (sınır 25m)
+- Agent simetrik action'lar üretemiyor
+
+NEDEN:
+1. log_std = -1.0 → std = exp(-1.0) ≈ 0.37 (ÇOK DÜŞÜK!)
+   - Exploration yetersiz
+   - Agent deterministik davranıyor
+   - Aynı action'ları tekrarlıyor
+
+2. ent_coef = 0.01 (biraz düşük)
+   - Exploration teşvik edilmiyor yeterince
+
+ÇÖZÜM:
+1. log_std: -1.0 → 0.0
+   - std = exp(0.0) = 1.0 (2.7x daha fazla exploration!)
+   - Agent daha fazla farklı action'lar deneyecek
+
+2. ent_coef: 0.01 → 0.02
+   - Exploration daha fazla teşvik edilecek
+
+BEKLENEN ETKİ:
+- Agent simetrik action'lar üretecek
+- Farklı yönlerde manevra yapacak
+- OutOfBounds sorunu azalacak
+- Daha çeşitli davranış
+
+================================================================================
+

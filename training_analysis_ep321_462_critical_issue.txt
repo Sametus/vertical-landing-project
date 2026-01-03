@@ -1,0 +1,196 @@
+================================================================================
+KRİTİK SORUN ANALİZİ: EP 321-462 (Update 70-110)
+================================================================================
+
+⚠️ CİDDİ PERFORMANS DÜŞÜŞÜ TESPİT EDİLDİ! ⚠️
+
+================================================================================
+YENİ BAŞARILAR (EP 321-462):
+================================================================================
+
+EP 326:  Start: 1.8m / 3.2m → End: 1.5m / 2.5m | Vel: -1.1 m/s ✓
+EP 361:  Start: 4.1m / 5.1m → End: 1.5m / 3.8m | Vel: -2.2 m/s ✓
+EP 363:  Start: 1.8m / 4.4m → End: 1.5m / 3.1m | Vel: -0.9 m/s ✓
+EP 390:  Start: 4.1m / 4.6m → End: 1.5m / 4.3m | Vel: -2.5 m/s ✓
+EP 396:  Start: 3.0m / 1.2m → End: 1.5m / 1.9m | Vel: -2.0 m/s ✓
+
+Toplam: 5 Success (EP 321-462 arası)
+
+================================================================================
+KRİTİK SORUN: CEILINGHIT PATLAĞI
+================================================================================
+
+Update 70-90 arası CEILINGHIT patlaması:
+
+EP 311:  CeilingHit (Start: 1.8m / 3.9m → End: 50.1m / 21.1m, Vel: 6.5 m/s)
+EP 314:  CeilingHit (Start: 7.9m / 4.8m → End: 50.0m / 22.2m, Vel: 7.9 m/s)
+EP 322:  CeilingHit (Start: 10.4m / 4.8m → End: 50.1m / 18.5m, Vel: 5.7 m/s)
+EP 333:  CeilingHit (Start: 2.5m / 3.1m → End: 50.1m / 5.4m, Vel: 10.4 m/s)
+EP 334:  CeilingHit (Start: 1.8m / 3.9m → End: 50.2m / 13.0m, Vel: 8.7 m/s)
+EP 336:  CeilingHit (Start: 6.0m / 3.9m → End: 50.1m / 11.7m, Vel: 4.9 m/s)
+EP 337:  CeilingHit (Start: 10.7m / 5.0m → End: 50.0m / 26.1m, Vel: 6.2 m/s)
+EP 338:  CeilingHit (Start: 7.3m / 3.2m → End: 50.1m / 23.0m, Vel: 10.5 m/s)
+EP 339:  CeilingHit (Start: 4.2m / 1.7m → End: 50.0m / 17.6m, Vel: 6.0 m/s)
+EP 340:  CeilingHit (Start: 6.1m / 3.1m → End: 50.1m / 14.9m, Vel: 7.9 m/s)
+EP 341:  CeilingHit (Start: 9.4m / 4.8m → End: 50.1m / 26.3m, Vel: 9.2 m/s)
+EP 344:  CeilingHit (Start: 8.4m / 4.4m → End: 50.1m / 14.4m, Vel: 9.5 m/s)
+
+12 CeilingHit Update 70-90 arasında!
+
+SORUN: Agent "yukarı kaçma" stratejisini öğrenmiş!
+
+================================================================================
+OUTOFBOUNDS PATLAĞI
+================================================================================
+
+Update 70-110 arası çok fazla OutOfBounds:
+
+EP 299-347 arası: 20+ OutOfBounds episode
+EP 321-346 arası: 15+ OutOfBounds episode
+
+End mesafeleri: 25-50m aralığında (çok kötü!)
+Çoğu End yüksekliği: 20-50m (yukarı çıkıyor)
+
+SORUN: Agent drift edip sınırların dışına çıkıyor!
+
+================================================================================
+İSTATİSTİKLER (EP 299-462, yaklaşık):
+================================================================================
+
+Başarılar:
+- Success: 5 (EP 326, 361, 363, 390, 396)
+- Success Rate: ~3.1% (5/163 episode)
+
+Başarısızlıklar (tahmini):
+- OutOfBounds: ~60 (37%)
+- CeilingHit: ~12 (7.4%)
+- MissedZone: ~60 (37%)
+- Crash: ~25 (15%)
+- Spin: ~1 (0.6%)
+
+================================================================================
+KRİTİK GÖZLEM: AGENT'IN STRATEJİ DEĞİŞİKLİĞİ
+================================================================================
+
+1. UPDATE 70-90: CEILINGHIT PATLAĞI
+   - Agent "yukarı kaçma" stratejisini öğrenmiş
+   - Çok fazla CeilingHit (12 episode)
+   - CeilingHit cezası (-1000) yeterli değil mi?
+
+2. UPDATE 80-110: OUTOFBOUNDS PATLAĞI
+   - Agent drift edip sınırların dışına çıkıyor
+   - End mesafeleri 25-50m (çok kötü)
+   - Yatay kontrol tamamen kaybolmuş
+
+3. SUCCESS ORANI DÜŞTÜ:
+   - Önceki: 4.5% (EP 3-313)
+   - Şimdi: 3.1% (EP 299-462)
+   - Performans düşüşü!
+
+================================================================================
+CEILINGHIT ANALİZİ:
+================================================================================
+
+Başlangıç koşulları:
+- Çoğu düşük yükseklik (1.8m - 10.7m)
+- Çoğu threshold içi mesafe (1.7m - 5.0m)
+- Ama agent yukarı kaçıyor!
+
+End durumu:
+- Hepsi 50.0-50.2m (tavan!)
+- Mesafe: 5.4m - 26.3m (drift var)
+- Vel: 4.9-10.5 m/s (yukarı doğru!)
+
+CEILINGHIT CEZASI YETERSİZ Mİ?
+- CeilingHit penalty: -1000.0
+- Threshold: 50m (dy >= 50.0 ve vy > 0.5)
+- Ama agent hala yukarı kaçıyor!
+
+SORUN: Agent CeilingHit cezasını görmüyor mu?
+- Belki reward shaping'de "yukarı kaçma" cezası yetersiz
+- Belki agent "yukarı kaçma" stratejisini öğrendi ve unutmuyor
+
+================================================================================
+OUTOFBOUNDS ANALİZİ:
+================================================================================
+
+Başlangıç koşulları:
+- Çeşitli yükseklikler (2.8m - 11.7m)
+- Çeşitli mesafeler (0.7m - 6.6m)
+
+End durumu:
+- Mesafe: 25-50m (çok kötü!)
+- Yükseklik: 5-50m (yukarı çıkıyor veya yukarıdan düşüyor)
+
+SORUN: Agent yatay kontrol yapamıyor!
+- Drift sorunu devam ediyor
+- Sınırların dışına çıkıyor
+- CeilingHit sonrası OutOfBounds'a düşüyor
+
+================================================================================
+POLICY COLLAPSE Mİ?
+================================================================================
+
+Belirtiler:
+1. CeilingHit patlaması (agent "yukarı kaçma" stratejisini öğrendi)
+2. OutOfBounds patlaması (agent drift yapıyor)
+3. Success rate düştü (4.5% → 3.1%)
+4. Agent daha önce başarılı olan stratejileri unuttu
+
+NEDEN OLABİLİR:
+1. Exploration çok yüksek (log_std = 0.0)
+2. Learning rate çok yüksek (agent önceki öğrenmeleri unutuyor)
+3. Reward function exploit ediliyor
+4. Model çok büyük update'lerden sonra bozuldu
+
+================================================================================
+ÖNERİLER (ACİL):
+================================================================================
+
+1. CEILINGHIT CEZASI ARTIRILMALI:
+   - -1000 → -2000 veya daha fazla
+   - Threshold daha erken olmalı (50m → 40m)
+
+2. YUKARI KAÇMA CEZASI GÜÇLENDİRİLMELİ:
+   - Şu an: 0.15 * vy * (dy / 20.0)
+   - Daha agresif olmalı: 0.25 * vy * (dy / 15.0)
+
+3. OUTOFBOUNDS CEZASI ARTIRILMALI:
+   - OutOfBounds penalty artırılabilir
+   - Yatay mesafe shaping güçlendirilmeli
+
+4. EXPLORATION AZALTILMALI:
+   - log_std: 0.0 → -0.5
+   - ent_coef: 0.02 → 0.01
+   - Agent "riskli" stratejilerden uzaklaşmalı
+
+5. LEARNING RATE AZALTILMALI:
+   - lr: 1e-4 → 5e-5
+   - Agent daha yavaş öğrenmeli (önceki öğrenmeleri unutmamak için)
+
+6. CHECKPOINT'TEN DÖN:
+   - Update 40 veya 60'dan devam et
+   - Update 100'den devam etmek yerine önceki başarılı modeli kullan
+
+================================================================================
+SONUÇ:
+================================================================================
+
+❌ CİDDİ PERFORMANS DÜŞÜŞÜ:
+   - Success rate: 4.5% → 3.1%
+   - CeilingHit patlaması (12 episode)
+   - OutOfBounds patlaması (60+ episode)
+
+❌ POLICY COLLAPSE:
+   - Agent "yukarı kaçma" stratejisini öğrendi
+   - Agent drift yapıyor
+   - Başarılı stratejiler unutuldu
+
+💡 ACİL MÜDAHALE GEREKLİ:
+   - CeilingHit cezası artırılmalı
+   - Yukarı kaçma cezası güçlendirilmeli
+   - Exploration azaltılmalı
+   - Belki checkpoint'ten dönülmeli
+
+================================================================================
+

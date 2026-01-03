@@ -1,0 +1,222 @@
+================================================================================
+UPDATE'LARDAN SONRA DAVRANIŞ DEĞİŞİKLİĞİ ANALİZİ
+================================================================================
+
+================================================================================
+UPDATE BAZLI LOSS VE METRİKLER:
+================================================================================
+
+UPDATE 10 (EP 33 başlangıcı):
+- Loss: 1365.1303 ⚠️ ÇOK YÜKSEK!
+- Entropy: 5.6958
+- KL: 0.0028
+- SONUÇ: Policy değişti, Crash patlaması başladı!
+
+UPDATE 20 (EP 103 başlangıcı):
+- Loss: 1536.7067 ⚠️ DAHA DA YÜKSEK!
+- Entropy: 5.7030
+- KL: 0.0024
+- SONUÇ: Policy daha da değişti, davranış kötüleşti!
+
+UPDATE 30 (EP 171 başlangıcı):
+- Loss: 348.4285 ✓ DÜŞTÜ!
+- Entropy: 5.7137
+- KL: -0.0000 (≈ 0)
+- SONUÇ: Loss düştü ama davranış hala karışık!
+
+UPDATE 40 (EP 250 başlangıcı):
+- Loss: 4270.2895 ⚠️⚠️⚠️ PATLADI!
+- Entropy: 5.7271
+- KL: 0.0026
+- SONUÇ: Loss patlaması! Policy çok değişti!
+
+================================================================================
+UPDATE 10 SONRASI (EP 33-102):
+================================================================================
+
+BEFORE UPDATE 10 (EP 1-32):
+- Success: 12/32 = 37.5%
+- Crash: 5/32 = 15.6%
+- OutOfBounds: 10/32 = 31.3%
+- MissedZone: 5/32 = 15.6%
+
+AFTER UPDATE 10 (EP 33-102):
+- Success: 3/70 = 4.3% ❌ DRAMATİK DÜŞÜŞ!
+- Crash: 47/70 = 67.1% ❌ PATLAMA!
+- OutOfBounds: 4/70 = 5.7% ✓ Azaldı
+- MissedZone: 16/70 = 22.9% ❌ Arttı
+
+SORUN: Loss çok yüksek (1365) → Policy kötü öğrendi!
+
+================================================================================
+UPDATE 20 SONRASI (EP 103-170):
+================================================================================
+
+BEFORE UPDATE 20 (EP 33-102):
+- Success: 3/70 = 4.3%
+- Crash: 47/70 = 67.1%
+- Ortalama crash hızı: -4.0 m/s
+
+AFTER UPDATE 20 (EP 103-170):
+- Success: 14/68 = 20.6% ✓ İYİLEŞME!
+- Crash: 30/68 = 44.1% ✓ AZALDI!
+- OutOfBounds: 4/68 = 5.9%
+- MissedZone: 20/68 = 29.4%
+- Ortalama crash hızı: -3.6 m/s ✓ YUMUŞADI!
+
+AMA: Loss hala çok yüksek (1536) → Policy hala karışık!
+
+================================================================================
+UPDATE 30 SONRASI (EP 171-249):
+================================================================================
+
+BEFORE UPDATE 30 (EP 103-170):
+- Success: 14/68 = 20.6%
+- Crash: 30/68 = 44.1%
+- Ortalama crash hızı: -3.6 m/s
+
+AFTER UPDATE 30 (EP 171-249):
+- Success: 12/79 = 15.2% ⚠️ BİRAZ DÜŞTÜ
+- Crash: 41/79 = 51.9% ❌ ARTTI!
+- OutOfBounds: 2/79 = 2.5% ✓ Azaldı
+- MissedZone: 24/79 = 30.4%
+- Ortalama crash hızı: ~-4.0 m/s ❌ BİRAZ SERTLEŞTİ!
+
+SORUN: Loss düştü (348) ama davranış düzelmedi!
+→ Policy "farklı bir yerden" öğreniyor!
+
+================================================================================
+UPDATE 40 SONRASI (EP 250-274):
+================================================================================
+
+BEFORE UPDATE 40 (EP 171-249):
+- Success: 12/79 = 15.2%
+- Crash: 41/79 = 51.9%
+- OutOfBounds: 2/79 = 2.5%
+
+AFTER UPDATE 40 (EP 250-274):
+- Success: 0/25 = 0% ❌❌❌ SIFIR!
+- Crash: 7/25 = 28.0% ✓ Azaldı
+- OutOfBounds: 5/25 = 20.0% ❌ PATLAMA!
+- MissedZone: 13/25 = 52.0% ❌ PATLAMA!
+
+KRİTİK SORUN: Loss patlaması (4270) → Policy tamamen çöktü!
+
+================================================================================
+NEDEN UPDATE'LARDAN SONRA DAVRANIŞ DEĞİŞİYOR?
+================================================================================
+
+1. ✅ PPO POLICY UPDATE MEKANİZMASI:
+   - Her update'da policy network güncelleniyor
+   - Gradient descent ile weights değişiyor
+   - Önceki davranış "unlearn" edilebiliyor!
+
+2. ❌ YÜKSEK LOSS = KÖTÜ ÖĞRENME:
+   - Loss çok yüksek → Policy kötü öğrendi
+   - Agent "yanlış" davranışları öğreniyor
+   - Crash exploit, MissedZone exploit, vb.
+
+3. ⚠️ ENTROPY VE KL DIVERGENCE:
+   - Entropy: 5.69-5.72 (yüksek, exploration fazla)
+   - KL: ~0.002-0.003 (küçük, ama update'lar policy'yi değiştiriyor)
+   - Her update policy'yi "shift" ediyor
+
+4. ❌ LOSS PATLAMASI (UPDATE 40):
+   - Loss: 348 → 4270 (12x artış!)
+   - Policy tamamen bozuldu
+   - Agent öğrendiği her şeyi "unlearn" etti!
+
+================================================================================
+UPDATE BAZLI ZAMAN SERİSİ ANALİZİ:
+================================================================================
+
+UPDATE 0-10 (EP 1-32):
+- İlk öğrenme
+- Success: 37.5% (iyi başlangıç)
+- Policy yavaş yavaş öğreniyor
+
+UPDATE 10 (EP 33):
+- Loss: 1365 (çok yüksek!)
+- Policy değişti, kötü öğrendi
+- Success: 4.3% (dramatik düşüş!)
+
+UPDATE 10-20 (EP 33-102):
+- Loss hala yüksek
+- Agent kötü davranışları öğreniyor
+- Crash exploit, MissedZone exploit
+
+UPDATE 20 (EP 103):
+- Loss: 1536 (daha da yüksek!)
+- Policy tekrar değişti
+- Ama bu sefer biraz iyileşti (Success: 20.6%)
+
+UPDATE 20-30 (EP 103-170):
+- Loss yavaşça düşüyor
+- Agent biraz daha iyi öğreniyor
+- Success rate artıyor
+
+UPDATE 30 (EP 171):
+- Loss: 348 (düştü!)
+- Ama davranış düzelmedi
+- Success: 15.2% (biraz düştü)
+
+UPDATE 30-40 (EP 171-249):
+- Loss stabil
+- Agent bazı şeyleri öğreniyor
+- Ama tutarsız davranış
+
+UPDATE 40 (EP 250):
+- Loss: 4270 (PATLAMA!)
+- Policy tamamen çöktü!
+- Success: 0% (sıfır!)
+
+================================================================================
+ÖNERİLER:
+================================================================================
+
+1. ✅ LEARNING RATE AZALTMA:
+   - Loss patlaması learning rate çok yüksek olabilir
+   - LR'ı düşür (örn. 3e-4 → 1e-4)
+   - Daha stabil öğrenme
+
+2. ✅ CLIP RANGE AYARLAMA:
+   - PPO clip range: şu an 0.2 (muhtemelen)
+   - Daha küçük yap (0.1-0.15)
+   - Policy değişimini yavaşlat
+
+3. ✅ BATCH SIZE / UPDATE FREQUENCY:
+   - Her 10 episode'da update çok sık olabilir
+   - 15-20 episode'da bir update yap
+   - Daha stabil öğrenme
+
+4. ✅ GRADIENT CLIPPING:
+   - Gradient'leri clip et (max_norm=0.5)
+   - Loss patlamasını önle
+
+5. ✅ LEARNING RATE SCHEDULER:
+   - Loss düşünce LR'ı azalt
+   - Daha kontrollü öğrenme
+
+6. ❌ CHECKPOINT YÖNETİMİ:
+   - Her update öncesi checkpoint kaydet
+   - Loss patlaması olursa geri dön
+
+================================================================================
+SONUÇ:
+================================================================================
+
+Update'lardan sonra davranış değişmesinin nedenleri:
+
+1. ✅ Policy network güncelleniyor (normal)
+2. ❌ Loss çok yüksek → Kötü öğrenme
+3. ❌ Loss patlaması → Policy çökmesi
+4. ⚠️ Learning rate çok yüksek olabilir
+5. ⚠️ Update frequency çok sık olabilir
+
+ÖNEMLİ: UPDATE 40'TAKİ LOSS PATLAMASI KRİTİK!
+- Loss: 348 → 4270 (12x artış!)
+- Success: 15% → 0% (sıfır!)
+- Agent öğrendiği her şeyi unuttu!
+
+================================================================================
+

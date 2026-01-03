@@ -1,0 +1,214 @@
+================================================================================
+UPDATE 50-60 İYİLEŞME ANALİZİ: EP 289-325
+================================================================================
+
+================================================================================
+UPDATE METRİKLERİ:
+================================================================================
+
+UPDATE 50 (EP 289 başlangıcı):
+- Loss: 193.9506
+- Entropy: 5.7350
+- KL: 0.0024
+
+UPDATE 60 (EP 317 başlangıcı):
+- Loss: 321.9249 ⚠️ Arttı (193.95 → 321.92, 1.66x)
+- Entropy: 5.7521
+- KL: 0.0012 ✓ Azaldı (daha stabil güncelleme)
+
+================================================================================
+UPDATE 50 SONRASI (EP 289-316): KRİTİK DÖNEM:
+================================================================================
+
+TOPLAM: 28 episode
+
+DAĞILIM:
+- Success: 1 (3.6%) ❌ Çok düşük!
+- Crash: 1 (3.6%) ✓ Azaldı
+- OutOfBounds: 20 (71.4%) ❌❌❌ ÇOK YÜKSEK!
+- MissedZone: 2 (7.1%) ✓ Azaldı
+- CeilingHit: 4 (14.3%) ❌ GERİ GELDİ!
+
+ÖNCEKİ (EP 250-288) İLE KARŞILAŞTIRMA:
+- Success: 1/39 (2.6%) → 1/28 (3.6%) ✓ Biraz arttı
+- Crash: 7/39 (17.9%) → 1/28 (3.6%) ✓✓ Dramatik azalma!
+- OutOfBounds: 17/39 (43.6%) → 20/28 (71.4%) ❌ Daha da kötüleşti!
+- MissedZone: 13/39 (33.3%) → 2/28 (7.1%) ✓✓ Dramatik azalma!
+- CeilingHit: 1/39 (2.6%) → 4/28 (14.3%) ❌ Arttı!
+
+================================================================================
+UPDATE 60 SONRASI (EP 317-325): İYİLEŞME İŞARETLERİ:
+================================================================================
+
+TOPLAM: 9 episode (kısa örnek, ama umut verici!)
+
+DAĞILIM:
+- Success: 3 (33.3%) ⭐⭐⭐ DRAMATİK İYİLEŞME!
+- Crash: 0 (0%) ✓ Yok!
+- OutOfBounds: 6 (66.7%) ⚠️ Hala yüksek ama azalıyor mu?
+- MissedZone: 0 (0%) ✓ Yok!
+- CeilingHit: 0 (0%) ✓ Yok!
+
+UPDATE 50 SONRASI İLE KARŞILAŞTIRMA:
+- Success: 1/28 (3.6%) → 3/9 (33.3%) ⭐⭐⭐ 9x artış!
+- Crash: 1/28 (3.6%) → 0/9 (0%) ✓ İyileşti
+- OutOfBounds: 20/28 (71.4%) → 6/9 (66.7%) ⚠️ Biraz azaldı
+- MissedZone: 2/28 (7.1%) → 0/9 (0%) ✓ İyileşti
+- CeilingHit: 4/28 (14.3%) → 0/9 (0%) ✓✓ İyileşti!
+
+================================================================================
+SUCCESS ANALİZİ:
+================================================================================
+
+UPDATE 50 SONRASI (EP 289-316):
+- EP 301: End: 1.5m / 2.2m | Vel: -0.7 m/s ✓
+
+UPDATE 60 SONRASI (EP 317-325):
+- EP 319: End: 1.5m / 3.7m | Vel: -1.6 m/s ✓
+- EP 320: End: 1.5m / 3.6m | Vel: -0.8 m/s ✓
+- EP 322: End: 1.5m / 3.2m | Vel: -1.1 m/s ✓
+
+TÜM SUCCESS'LER:
+- Düşük yükseklikten başladı (1.8-3.2m)
+- Küçük yatay mesafe (2.2-3.8m)
+- Mükemmel hız kontrolü (-0.7 ile -1.6 m/s)
+- Threshold içi (≤6.0m)
+
+SORUN: Agent sadece "kolay" senaryolarda başarılı!
+
+================================================================================
+CEILINGHIT SORUNU:
+================================================================================
+
+UPDATE 50 SONRASI (EP 289-316):
+- EP 294: End: 50.0m | Vel: 6.0 m/s
+- EP 296: End: 50.1m | Vel: 10.4 m/s
+- EP 302: End: 50.1m | Vel: 7.4 m/s
+- EP 308: End: 50.1m | Vel: 9.3 m/s
+- EP 309: End: 50.1m | Vel: 8.5 m/s
+
+TOPLAM: 5 CeilingHit (EP 294-309 arası)
+
+UPDATE 60 SONRASI (EP 317-325):
+- CeilingHit: 0 ✓ ÇÖZÜLDÜ!
+
+İYİLEŞME: CeilingHit sorunu geçici görünüyor, Update 60 sonrası düzeldi!
+
+================================================================================
+OUTOFBOUNDS SORUNU:
+================================================================================
+
+UPDATE 50 SONRASI (EP 289-316):
+- Toplam: 20 OutOfBounds / 28 episode = 71.4%
+- End mesafeleri: 17-44m (büyük drift)
+
+UPDATE 60 SONRASI (EP 317-325):
+- Toplam: 6 OutOfBounds / 9 episode = 66.7%
+- Hala yüksek ama biraz azaldı!
+
+SORUN: OutOfBounds hala çok yüksek ama azalma eğilimi var mı?
+
+ZAMAN SERİSİ:
+- EP 289-301: 11 OutOfBounds / 13 = 84.6%
+- EP 302-316: 9 OutOfBounds / 15 = 60.0% ✓ Azaldı!
+- EP 317-325: 6 OutOfBounds / 9 = 66.7%
+
+EĞİLİM: OutOfBounds azalıyor gibi görünüyor! (84.6% → 60.0% → 66.7%)
+
+================================================================================
+UPDATE 60 SONRASI BAŞARILAR:
+================================================================================
+
+EP 319: Success | Start: 3.2m / 3.8m | End: 1.5m / 3.7m | Vel: -1.6 m/s
+EP 320: Success | Start: 2.7m / 3.6m | End: 1.5m / 3.6m | Vel: -0.8 m/s
+EP 322: Success | Start: 1.9m / 3.2m | End: 1.5m / 3.2m | Vel: -1.1 m/s
+
+3 ARDIŞIK SUCCESS DEĞİL ama 9 episode'da 3 Success = 33.3%!
+
+ÖNCEKİ: 28 episode'da 1 Success = 3.6%
+
+İYİLEŞME: 3.6% → 33.3% (9x artış!) ⭐⭐⭐
+
+================================================================================
+LOSS TREND:
+================================================================================
+
+UPDATE 40: Loss = 4270.29 (PATLAMA!)
+UPDATE 50: Loss = 193.95 (Düştü, 22x azalma!)
+UPDATE 60: Loss = 321.92 (Arttı, 1.66x)
+
+SORUN: Loss tekrar arttı ama davranış iyileşti!
+
+AÇIKLAMA: Loss artmasına rağmen davranış iyileşmesi normal olabilir:
+- Loss sadece value/policy loss
+- Agent "farklı bir şekilde" öğreniyor olabilir
+- Success rate artışı daha önemli!
+
+================================================================================
+ZAMAN SERİSİ TREND:
+================================================================================
+
+UPDATE 40 SONRASI (EP 250-288):
+- Success: 2.6%
+- OutOfBounds: 43.6%
+- CeilingHit: 2.6%
+
+UPDATE 50 SONRASI (EP 289-316):
+- Success: 3.6% ✓ Biraz arttı
+- OutOfBounds: 71.4% ❌ Kötüleşti
+- CeilingHit: 14.3% ❌ Arttı
+
+UPDATE 60 SONRASI (EP 317-325):
+- Success: 33.3% ⭐⭐⭐ Dramatik iyileşme!
+- OutOfBounds: 66.7% ⚠️ Biraz azaldı
+- CeilingHit: 0% ✓ Düzeldi!
+
+EĞİLİM: Update 60 sonrası iyileşme başladı!
+
+================================================================================
+ÖNERİLER:
+================================================================================
+
+1. ✅ DEVAM ET (Ana Öneri):
+   - Update 60 sonrası iyileşme başladı!
+   - Success rate: 3.6% → 33.3% (9x artış!)
+   - CeilingHit sorunu çözüldü
+   - OutOfBounds azalma eğiliminde
+
+2. ⚠️ İZLEME:
+   - Update 70'e kadar bekle
+   - Success rate artmaya devam ediyor mu?
+   - OutOfBounds düşüyor mu?
+
+3. 💡 REWARD SHAPING:
+   - Eğer OutOfBounds devam ederse:
+     * OutOfBounds cezasını artır
+     * Progressive mesafe cezasını güçlendir
+
+4. ✅ CEILINGHIT SORUNU ÇÖZÜLDÜ:
+   - Update 60 sonrası CeilingHit: 0
+   - Sorun geçici görünüyor
+
+================================================================================
+SONUÇ:
+================================================================================
+
+UPDATE 60 SONRASI İYİLEŞME BAŞLADI! ⭐⭐⭐
+
+✅ İYİLEŞMELER:
+   - Success rate: 3.6% → 33.3% (9x artış!)
+   - CeilingHit: 14.3% → 0% (çözüldü!)
+   - Crash: 3.6% → 0% (yok!)
+   - MissedZone: 7.1% → 0% (yok!)
+
+⚠️ DEVAM EDEN SORUNLAR:
+   - OutOfBounds: 71.4% → 66.7% (hala yüksek ama azalıyor)
+   - Success sadece "kolay" senaryolarda
+
+💡 EĞİLİM: Update 60 sonrası iyileşme başladı!
+   - Agent öğrenmeye devam ediyor
+   - Policy düzeliyor
+   - Devam etmek mantıklı!
+
+================================================================================
+
