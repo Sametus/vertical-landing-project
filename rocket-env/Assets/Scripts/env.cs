@@ -136,12 +136,13 @@ namespace Assets.Scripts
             
             // ROLL-PITCH COUPLING DÜZELTMESİ:
             // AddRelativeTorque kullanarak roll dönmesinin pitch/yaw torklarına etkisini önlüyoruz
-            // Bu sayede roll yapıldığında pitch/yaw torklarının yönü değişmez
-            Vector3 pitchTork = Vector3.right * pitch * rcsPower;        // Local X ekseni → Pitch ✓
-            Vector3 yawTork   = Vector3.up * yaw * rcsPower;             // Local Y ekseni → Yaw ✓
-            Vector3 rollTork  = Vector3.forward * roll * (rcsPower * 0.1f); // Local Z ekseni → Roll ✓
+            // AddRelativeTorque local space'de tork uygular ve roll coupling'i otomatik handle eder
+            // transform.right/up/forward kullanmalıyız (local space vektörleri)
+            Vector3 pitchTork = transform.right * pitch * rcsPower;        // Local X ekseni → Pitch ✓
+            Vector3 yawTork   = transform.up * yaw * rcsPower;             // Local Y ekseni → Yaw ✓
+            Vector3 rollTork  = transform.forward * roll * (rcsPower * 0.1f); // Local Z ekseni → Roll ✓
 
-            // AddRelativeTorque: Local space'de tork uygular, roll coupling'i otomatik handle eder
+            // AddRelativeTorque: Local space'de tork uygular, roll coupling'i Unity otomatik handle eder
             rocketRb.AddRelativeTorque(pitchTork + yawTork + rollTork);
 
             // Efekt Kodları Aynen Kalabilir
