@@ -332,14 +332,26 @@ Projeyi geliştirmek için yapılabilecekler:
 
 ## Log Analizi ve Görselleştirme
 
-Eğitim sırasında oluşturulan log dosyalarından detaylı analizler yapmak ve grafikler oluşturmak için MATLAB scripti kullanılabilir.
+Eğitim sırasında oluşturulan log dosyalarından detaylı analizler yapmak ve grafikler oluşturmak için Python scripti (matplotlib/seaborn) kullanılabilir.
 
 ### Analiz Scriptini Çalıştırma
 
-**MATLAB'de scripti çalıştırın**:
-```matlab
+**1. Python environment'ını aktif edin** (rl_codes veya DL_YOLO):
+```bash
+conda activate rl_codes
+# veya
+conda activate DL_YOLO
+```
+
+**2. Gerekli kütüphaneleri yükleyin** (eğer yoksa):
+```bash
+pip install matplotlib seaborn pandas numpy
+```
+
+**3. Scripti çalıştırın**:
+```bash
 cd scripts
-analyze_training
+python analyze_training.py
 ```
 
 Script şu grafikleri otomatik olarak oluşturur ve PNG formatında kaydeder:
