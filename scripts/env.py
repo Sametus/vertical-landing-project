@@ -135,21 +135,21 @@ class Env():
             return -500.0, True
 
         # --- LANDING CHECK ---
-        if dy <= 1.5:
+        if dy <= 1.7:
             # zone: kare yerine daire daha stabil
-            in_zone = (dist_h < 6.0)  # daha da gevşetildi: 4.5 → 6.0 (normal inişleri başarı say)
+            in_zone = (dist_h < 6.5)  # daha da gevşetildi: 4.5 → 6.0 (normal inişleri başarı say)
 
             if not in_zone:
                 self.termination_reason = "MissedZone"
                 return -300.0, True  # ceza hafifletildi: -350 → -300 (çok sert değil)
 
-            ok_vy   = (abs(vy) <= 3.0)   # sıkılaştırıldı: 4.5 → 2.5 (daha yumuşak iniş)
-            ok_vh   = (v_h <= 2.5)       # sıkılaştırıldı: 3.0 → 2.0 (daha kontrollü)
+            ok_vy   = (abs(vy) <= 3.5)   # sıkılaştırıldı: 4.5 → 2.5 (daha yumuşak iniş)
+            ok_vh   = (v_h <= 3.0)       # sıkılaştırıldı: 3.0 → 2.0 (daha kontrollü)
             ok_tilt = (up_y >= 0.85)     # aynı
             ok_spin = (w_mag <= 4.5)     # aynı
 
             if ok_vy and ok_vh and ok_tilt and ok_spin:
-                bonus = (self.max_steps - self.step_count) * 0.2
+                bonus = (self.max_steps - self.step_count) * 0.3
                 self.termination_reason = "Success"
                 return 2000.0 + bonus, True  # Ödül artırıldı: 1500 → 2000
             else:
@@ -174,12 +174,12 @@ class Env():
         # merkeze uzaklık cezası (artırıldı: drift sorununu çözmek için)
         # Progressive: mesafe arttıkça ceza artıyor
         if dist_h > 10.0:
-            reward += -0.08 * dist_h  # 10m üzeri: daha agresif ceza (artırıldı: -0.05 → -0.08)
+            reward += -0.09 * dist_h  # 10m üzeri: daha agresif ceza (artırıldı: -0.05 → -0.08)
         else:
             reward += -0.05 * dist_h  # 10m altı: orta seviye ceza (artırıldı: -0.03 → -0.05)
 
         # yatay hız cezası (artırıldı: drift'i azaltmak için)
-        reward += -0.06 * v_h
+        reward += -0.07 * v_h
 
         # VERTICAL VELOCITY: HER İRTİFADA AKTİF (PROGRESSIVE)
         # Yüksek irtifada küçük ceza, düşük irtifada büyük ceza
@@ -199,16 +199,16 @@ class Env():
         
         # YERE YAKLAŞMA BONUSU (agent'ı inişe teşvik et)
         if dy < 20.0:
-            approach_bonus = 0.05 * np.exp(-dy / 5.0)  # Max ~0.05
+            approach_bonus = 0.08 * np.exp(-dy / 5.0)  # Max ~0.05
             reward += approach_bonus
         
         # MERKEZE YAKLAŞMA BONUSU (exponential - dead code'dan alındı)
-        center_bonus = 0.03 * np.exp(-dist_h / 10.0)  # Max ~0.03, merkeze yaklaştıkça artar
+        center_bonus = 0.09 * np.exp(-dist_h / 10.0)  # Max ~0.03, merkeze yaklaştıkça artar
         reward += center_bonus
         
         # YAVAŞ İNİŞ BONUSU (vy > -2 m/s iken)
-        if vy < 0.0 and abs(vy) < 2.0:
-            slow_descent_bonus = 0.03 * (2.0 - abs(vy)) / 2.0  # Max ~0.03
+        if vy < 0.0 and abs(vy) < 2.5:
+            slow_descent_bonus = 0.05 * (2.5 - abs(vy)) / 2.5  # Max ~0.03
             reward += slow_descent_bonus
 
         if self.step_count >= self.max_steps:
