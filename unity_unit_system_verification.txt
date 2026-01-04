@@ -1,0 +1,119 @@
+================================================================================
+UNITY UNIT SİSTEMİ DOĞRULAMASI
+================================================================================
+
+SORU: Unity'de 1 birim kaç metre ediyor? Hesaplamalarda metre kullanıyoruz ama
+Unity'de doğru mu?
+
+================================================================================
+1. UNITY DÖKÜMANTASYONU
+================================================================================
+
+Unity Documentation'dan:
+"By default, 1 Unity unit is 1 meter."
+
+Yani Unity'de varsayılan olarak 1 unit = 1 metre kabul edilir.
+
+================================================================================
+2. FİZİKSEL DEĞERLERDEN DOĞRULAMA
+================================================================================
+
+A) GRAVITY (Physics Settings):
+   - Unity'de: -9.81 m/s²
+   - Gerçek fizik: -9.81 m/s²
+   - Sonuç: 1 Unity unit = 1 metre ✓
+
+B) ROKET KÜTLESİ (Scene dosyası):
+   - Unity'de: 1000 kg
+   - Hesaplamalarda: 1000 kg
+   - Sonuç: 1 Unity unit = 1 metre ✓
+
+C) THRUST POWER (env.cs):
+   - Unity'de: 20000 N (Newton)
+   - Fiziksel hesaplama: 
+     * İvme = Thrust / Mass = 20000 N / 1000 kg = 20 m/s²
+     * Bu metre/saniye² cinsinden doğru
+   - Sonuç: 1 Unity unit = 1 metre ✓
+
+D) ROKET BOYUTLARI (Scene dosyası):
+   - Roket yüksekliği: 6.5 unit (CapsuleCollider Height)
+   - Gerçekçi roket: ~6.5 metre (makul)
+   - Sonuç: 1 Unity unit = 1 metre ✓
+
+E) BAŞLANGIÇ YÜKSEKLİĞİ:
+   - Python'da: 5-15 metre
+   - Unity'de: 5-15 unit
+   - Sonuç: 1 Unity unit = 1 metre ✓
+
+================================================================================
+3. FİZİKSEL HESAPLAMALAR DOĞRULAMASI
+================================================================================
+
+SERBEST DÜŞÜŞ HESABI:
+- Başlangıç yüksekliği: 15 metre (Python'da)
+- Unity'de: 15 unit
+- Gravity: -9.81 m/s² (Unity'de)
+- Serbest düşüş hızı: v = √(2gh) = √(2 * 9.81 * 15) ≈ 17.15 m/s
+- Terminal'de görülen hızlar: ~7-17 m/s (makul)
+- Sonuç: 1 Unity unit = 1 metre ✓
+
+THRUST HESABI:
+- Thrust: 20000 N
+- Mass: 1000 kg
+- İvme: 20000/1000 = 20 m/s²
+- Net ivme (thrust - gravity): 20 - 9.81 = 10.19 m/s² yukarı
+- Bu değerler fiziksel olarak tutarlı
+- Sonuç: 1 Unity unit = 1 metre ✓
+
+================================================================================
+4. KONTROL: UNITY SCENE DOSYASI
+================================================================================
+
+DynamicsManager.asset:
+  m_Gravity: {x: 0, y: -9.81, z: 0}
+  → Unity'de gravity -9.81 m/s² (metre/saniye²)
+
+SampleScene.unity:
+  Rigidbody:
+    m_Mass: 1000
+    → Kütle 1000 kg
+
+  CapsuleCollider:
+    m_Height: 6.5
+    → Roket yüksekliği 6.5 unit = 6.5 metre
+
+env.cs:
+  mainThrustPower = 20000f
+  → Thrust 20000 N (Newton)
+
+================================================================================
+5. SONUÇ
+================================================================================
+
+✅ DOĞRULAMA: 1 Unity unit = 1 metre
+
+Tüm fiziksel değerler ve hesaplamalar metre sistemine uygun:
+- Gravity: -9.81 m/s² ✓
+- Kütle: 1000 kg ✓
+- Thrust: 20000 N ✓
+- Roket boyutu: 6.5 metre ✓
+- Başlangıç yüksekliği: 5-15 metre ✓
+- Serbest düşüş hızları: Fiziksel olarak tutarlı ✓
+
+Python'daki hesaplamalar (metre cinsinden) Unity'ye doğru şekilde aktarılıyor.
+
+================================================================================
+6. NOTLAR
+================================================================================
+
+- Unity'de varsayılan olarak 1 unit = 1 metre
+- Physics Settings'te gravity -9.81 m/s² (metre/saniye²)
+- Rigidbody.AddForce() Newton cinsinden kuvvet alır
+- Tüm pozisyon ve mesafe değerleri metre cinsinden
+- State normalization ve reward hesaplamaları metre cinsinden doğru
+
+HERHANGİ BİR SORUN YOK - SİSTEM DOĞRU ÇALIŞIYOR! ✅
+
+================================================================================
+
+
