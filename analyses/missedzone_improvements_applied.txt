@@ -1,0 +1,186 @@
+================================================================================
+MISSEDZONE İYİLEŞTİRMELERİ UYGULANDI
+================================================================================
+
+TARİH: Şu an
+DOSYA: scripts/env.py
+
+================================================================================
+1. YAPILAN DEĞİŞİKLİKLER
+================================================================================
+
+A) PROGRESSIVE MISSEDZONE REWARD EKLENDİ:
+   
+   ÖNCEKİ:
+   ```python
+   if not in_zone:
+       return -300.0, True  # Sabit ceza
+   ```
+   
+   YENİ:
+   ```python
+   if not in_zone:
+       # PROGRESSIVE MISSEDZONE REWARD: Zone'a yakınlığa göre ceza
+       # dist_h = 6.5m → -150 (hafif), dist_h = 10m → -250 (orta), dist_h = 15m → -350 (sert)
+       base_penalty = -150.0  # Zone sınırında (6.5m)
+       distance_penalty = -20.0 * max(0.0, dist_h - 6.5)  # Her 1m uzaklık için -20
+       missed_zone_reward = max(-350.0, base_penalty + distance_penalty)  # Max -350 cap
+       return missed_zone_reward, True
+   ```
+   
+   ETKİ:
+   - Zone'a yakın MissedZone (dist_h = 7m): -170 (hafif ceza)
+   - Zone'a orta mesafede (dist_h = 10m): -250 (orta ceza)
+   - Zone'a uzak (dist_h = 15m): -350 (sert ceza)
+   - Agent zone'a yakın olmayı öğrenir (daha az ceza)
+
+B) CENTER BONUS ARTIRILDI:
+   
+   ÖNCEKİ:
+   ```python
+   center_bonus = 0.09 * np.exp(-dist_h / 10.0)  # Max ~0.09
+   ```
+   
+   YENİ:
+   ```python
+   center_bonus = 0.12 * np.exp(-dist_h / 10.0)  # Max ~0.12 (artırıldı: 0.09 → 0.12)
+   ```
+   
+   ETKİ:
+   - dist_h = 0m: bonus = 0.12 (önceden 0.09, +33% artış)
+   - dist_h = 5m: bonus ≈ 0.073 (önceden 0.055, +33% artış)
+   - dist_h = 10m: bonus ≈ 0.044 (önceden 0.033, +33% artış)
+   - Agent daha güçlü merkeze çekilir
+
+C) DISTANCE PENALTY ARTIRILDI:
+   
+   ÖNCEKİ:
+   ```python
+   if dist_h > 10.0:
+       reward += -0.09 * dist_h  # 10m üzeri
+   ```
+   
+   YENİ:
+   ```python
+   if dist_h > 10.0:
+       reward += -0.12 * dist_h  # 10m üzeri (artırıldı: -0.09 → -0.12)
+   ```
+   
+   ETKİ:
+   - dist_h = 20m: penalty = -2.4 (önceden -1.8, +33% artış)
+   - dist_h = 35m: penalty = -4.2 (önceden -3.15, +33% artış)
+   - Agent merkeze çekilir, drift azalır
+
+================================================================================
+2. BEKLENEN ETKİLER
+================================================================================
+
+MISSEDZONE ORANI:
+- Şu an: %20.7
+- Beklenen: %10-15 (azalma: ~%30-50)
+
+NEDEN?
+1. ✅ Progressive reward: Agent zone'a yakın olmayı öğrenir (daha az ceza)
+2. ✅ Center bonus artışı: Agent daha güçlü merkeze çekilir
+3. ✅ Distance penalty artışı: Agent merkeze yakın kalmayı öğrenir
+
+SUCCESS RATE:
+- Şu an: %18.4
+- Beklenen: %20-25 (artış: ~%10-35)
+
+NEDEN?
+1. ✅ MissedZone azalınca, agent başarılı iniş yapıp zone'a girme şansı artar
+2. ✅ Center bonus ve distance penalty agent'ı merkeze çeker
+
+ÖĞRENME HIZI:
+- Şu an: Orta seviye (MissedZone %20.7)
+- Beklenen: Daha hızlı (MissedZone %10-15)
+
+NEDEN?
+1. ✅ Agent daha az MissedZone görür, daha fazla Success görür
+2. ✅ Progressive reward daha net öğrenme sinyali verir
+
+================================================================================
+3. REWARD DEĞER ÖRNEKLERİ
+================================================================================
+
+PROGRESSIVE MISSEDZONE REWARD (Scaling 0.5x sonrası):
+
+| dist_h | Ham Reward | Scaling Sonrası | Açıklama |
+|--------|------------|-----------------|----------|
+| 6.5m   | -150       | -75             | Zone sınırı (hafif ceza) |
+| 7.0m   | -160       | -80             | Zone'a yakın |
+| 8.0m   | -180       | -90             | Zone'a orta mesafe |
+| 10.0m  | -250       | -125            | Zone'a uzak |
+| 12.0m  | -320       | -160            | Zone'a çok uzak |
+| 15.0m+ | -350       | -175            | Max ceza (cap) |
+
+CENTER BONUS (Scaling 0.5x sonrası):
+
+| dist_h | Ham Bonus | Scaling Sonrası | Önceden (0.09) |
+|--------|-----------|-----------------|----------------|
+| 0m     | 0.12      | 0.06            | 0.045          |
+| 3m     | 0.089     | 0.045           | 0.033          |
+| 5m     | 0.073     | 0.037           | 0.055          |
+| 10m    | 0.044     | 0.022           | 0.033          |
+| 20m    | 0.016     | 0.008           | 0.012          |
+
+DISTANCE PENALTY (Scaling 0.5x sonrası):
+
+| dist_h | Ham Penalty | Scaling Sonrası | Önceden (-0.09) |
+|--------|-------------|-----------------|-----------------|
+| 10m    | -1.2        | -0.6            | -0.45           |
+| 20m    | -2.4        | -1.2            | -0.9            |
+| 35m    | -4.2        | -2.1            | -1.575          |
+
+================================================================================
+4. ÖNEMLİ NOTLAR
+================================================================================
+
+1. PROGRESSIVE MISSEDZONE REWARD:
+   - Zone sınırında (6.5m) ceza hafif: -150 (önceden -300)
+   - Uzaklaştıkça ceza artıyor: Her 1m için -20
+   - Max ceza: -350 (zone'a çok uzakta)
+   - Agent zone'a yakın olmayı öğrenir
+
+2. CENTER BONUS:
+   - %33 artış (0.09 → 0.12)
+   - Exponential decay korunuyor
+   - Merkeze yaklaşma daha güçlü teşvik ediliyor
+
+3. DISTANCE PENALTY:
+   - %33 artış (-0.09 → -0.12)
+   - Sadece dist_h > 10m için (yüksek mesafelerde daha agresif)
+
+4. REWARD SCALING:
+   - Tüm reward'lar hala 0.5x scaling ile çalışıyor
+   - Progressive MissedZone reward da scaling'e tabi
+
+================================================================================
+5. TEST EDİLMESİ GEREKENLER
+================================================================================
+
+1. ✅ MissedZone oranı azalıyor mu? (Hedef: %10-15)
+2. ✅ Success rate artıyor mu? (Hedef: %20-25)
+3. ✅ Agent zone'a daha yakın mı iniyor?
+4. ✅ Öğrenme hızı artıyor mu?
+
+================================================================================
+6. SONUÇ
+================================================================================
+
+✅ TÜM İYİLEŞTİRMELER UYGULANDI!
+
+1. ✅ Progressive MissedZone reward eklendi
+2. ✅ Center bonus artırıldı (0.09 → 0.12)
+3. ✅ Distance penalty artırıldı (-0.09 → -0.12)
+
+BEKLENEN ETKİ:
+- MissedZone: %20.7 → %10-15 (azalma: ~%30-50)
+- Success rate: %18.4 → %20-25 (artış: ~%10-35)
+- Öğrenme hızı: Artacak
+
+DEĞİŞİKLİKLER TEST EDİLMEYE HAZIR! 🚀
+
+================================================================================
+

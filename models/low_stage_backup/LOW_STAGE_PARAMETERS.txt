@@ -1,0 +1,175 @@
+================================================================================
+LOW STAGE FINAL PARAMETERS - Update 820
+================================================================================
+Tarih: 2025-01-XX (Medium stage geçişinden önce)
+Model: rocket_model_up820.keras
+
+Bu parametreler Low stage (5-15m) için kullanıldı.
+Medium stage'e geçiş yapılırken sorun olursa bu parametrelere geri dönülmeli.
+
+================================================================================
+1. BAŞLANGIÇ KOŞULLARI (env.py - __init__)
+================================================================================
+
+# Başlangıç değerleri - LOW STAGE
+self.init_y_min = 5.0      # Min başlangıç yüksekliği (m)
+self.init_y_max = 15.0     # Max başlangıç yüksekliği (m)
+self.init_z_min = -5.0     # Min z pozisyonu (m)
+self.init_z_max = 5.0      # Max z pozisyonu (m)
+self.init_x_min = -5.0     # Min x pozisyonu (m)
+self.init_x_max = 5.0      # Max x pozisyonu (m)
+self.init_pitch_min = -2.0 # Min pitch açısı (derece)
+self.init_pitch_max = 2.0  # Max pitch açısı (derece)
+self.init_yaw_min = -2.0   # Min yaw açısı (derece)
+self.init_yaw_max = 2.0    # Max yaw açısı (derece)
+
+================================================================================
+2. STATE NORMALİZASYON ÖLÇEKLERİ
+================================================================================
+
+self.dx_scale = 45.0   # Yatay pozisyon limiti
+self.dy_scale = 50.0   # Yükseklik ölçeği
+self.v_scale = 25.0    # Doğrusal hız ölçeği (m/s)
+self.w_scale = 4.0     # Açısal hız ölçeği (rad/s)
+
+================================================================================
+3. TERMINAL CONDITIONS & REWARDS
+================================================================================
+
+CEILING HIT:
+- Threshold: dy >= 50.0 AND vy > 0.3
+- Reward: -1000.0
+
+OUT OF BOUNDS:
+- Threshold: abs(dx) >= 35.0 OR abs(dz) >= 35.0
+- Reward: -650.0
+
+TILTED:
+- Threshold: up_y < 0.35
+- Reward: -500.0
+
+SPIN:
+- Threshold: w_mag > 10.0
+- Reward: -500.0
+
+MISSED ZONE:
+- Threshold: dy <= 1.7 AND dist_h >= 8.0
+- Reward: Progressive
+  - Base: -150.0 (zone sınırında, 8.0m)
+  - Distance penalty: -20.0 * max(0.0, dist_h - 8.0)
+  - Max cap: -350.0
+
+SUCCESS:
+- Height: dy <= 1.7
+- Zone: dist_h < 8.0
+- Conditions:
+  - abs(vy) <= 3.5 m/s
+  - v_h <= 3.0 m/s
+  - up_y >= 0.85
+  - w_mag <= 4.5 rad/s
+- Reward: 2000.0 + bonus
+- Bonus: (max_steps - step_count) * 0.3
+
+CRASH:
+- Height: dy <= 1.7
+- Zone: dist_h < 8.0
+- But fails success conditions
+- Reward: -300.0
+
+TIME LIMIT:
+- Threshold: step_count >= max_steps (800)
+- Reward: reward - 60.0
+
+================================================================================
+4. REWARD SHAPING
+================================================================================
+
+BASE REWARD:
+- Step penalty: -0.02
+
+YUKARI GİTME CEZASI:
+- Condition: vy > 0.0
+- Formula: -0.20 * vy * (dy / 20.0)
+
+DİKEY UZAKLIK (YÜKSEKLİK) CEZASI:
+- Condition: dy > 15.0
+- Formula: -0.03 * (dy - 15.0)
+
+MERKEZE UZAKLIK CEZASI:
+- dist_h > 10.0: -0.12 * dist_h
+- dist_h <= 10.0: -0.05 * dist_h
+
+YATAY HIZ CEZASI:
+- Formula: -0.07 * v_h
+
+DİKEY HIZ CEZASI (AŞAĞI):
+- Condition: vy < 0.0
+- Formula: -0.08 * abs(vy) * altitude_factor
+- altitude_factor: 1.0 + (15.0 / (dy + 1.0))
+
+STABİLİTE:
+- up_y < 0.85: -0.08 * (0.85 - up_y)
+- up_y >= 0.85: +0.08 * (up_y - 0.85)
+
+SPIN CEZASI:
+- Formula: -0.01 * w_mag
+
+YERE YAKLAŞMA BONUSU:
+- Condition: dy < 20.0
+- Formula: +0.08 * exp(-dy / 5.0)
+
+MERKEZE YAKLAŞMA BONUSU:
+- Formula: +0.12 * exp(-dist_h / 10.0)
+
+YAVAŞ İNİŞ BONUSU:
+- Condition: vy < 0.0 AND abs(vy) < 2.5
+- Formula: +0.05 * (2.5 - abs(vy)) / 2.5
+
+================================================================================
+5. REWARD SCALING
+================================================================================
+
+REWARD SCALING FACTOR: 0.5x
+- Her reward 0.5 ile çarpılır
+- Success: 2000.0 → 1000.0 (scaled)
+- CeilingHit: -1000.0 → -500.0 (scaled)
+
+================================================================================
+6. LOW STAGE PERFORMANCE (Update 730-800)
+================================================================================
+
+Success Rate: %40-50 (stabil ve iyi)
+Crash Rate: %41.2 (yüksek ama öğreniyor)
+MissedZone: %6.8 (iyi)
+OutOfBounds: %4.2 (çok iyi)
+Spin: %3.4 (yeni sorun)
+CeilingHit: %0.6 (yeni sorun)
+
+================================================================================
+7. GERİ DÖNÜŞ TALİMATLARI
+================================================================================
+
+Medium stage'de sorun olursa bu parametrelere geri dönmek için:
+
+1. env.py dosyasında:
+   - self.init_y_max = 15.0 olarak ayarla (30.0'dan)
+
+2. Model yükleme:
+   - rocket_model_up820_low_stage_final.keras modelini yükle
+   - rocket_model_up820_low_stage_final.state.pkl.gz state'ini yükle (varsa)
+
+3. Training'e devam et:
+   - Low stage parametreleriyle training'e devam et
+   - Success rate %40-50 seviyesinde olmalı
+
+================================================================================
+8. NOTLAR
+================================================================================
+
+- Bu parametreler Low stage (5-15m) için optimize edilmiştir
+- Medium stage'e geçiş yapılırken bu parametreler referans alınmalıdır
+- Sorun olursa bu parametrelere geri dönülerek training'e devam edilebilir
+- Reward scaling: 0.5x (medium stage'de 0.25x'e düşürülmesi önerilir)
+
+================================================================================
+

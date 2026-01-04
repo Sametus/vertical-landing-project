@@ -1,0 +1,374 @@
+================================================================================
+TRAINING ANALİZİ: Update 730-800 (EP 624-1120) - UZUN VADELİ TREND
+================================================================================
+
+ARALIK: Update 730 → 800 (70 updates, 497 episodes)
+ZAMAN: 18:26:53 - 18:43:03 (yaklaşık 16 dakika)
+DURUM: Zone threshold 8.0m, Progressive MissedZone, Center bonus 0.12, Distance penalty -0.12
+
+================================================================================
+1. GENEL İSTATİSTİKLER
+================================================================================
+
+TOPLAM EPISODES: 497 (EP 624-1120)
+
+TERMINATION DAĞILIMI:
+- Success: 217 episodes (%43.7)
+- Crash: 205 episodes (%41.2)
+- MissedZone: 34 episodes (%6.8)
+- OutOfBounds: 21 episodes (%4.2)
+- Spin: 17 episodes (%3.4)
+- CeilingHit: 3 episodes (%0.6)
+
+ÖNEMLİ GÖZLEM:
+✅ Success rate %43.7 (Update 661-670'te %59.3'tü, %15.6 düşüş)
+⚠️ Crash rate %41.2 (Update 661-670'te %23.7'ydi, %17.5 artış!)
+⚠️ MissedZone %6.8 (Update 661-670'te %8.5'ti, hafif iyileşme)
+✅ OutOfBounds %4.2 (Update 661-670'te %8.5'ti, %4.3 iyileşme)
+⚠️ Spin %3.4 (yeni bir sorun ortaya çıktı!)
+⚠️ CeilingHit %0.6 (yeni bir sorun ortaya çıktı!)
+
+================================================================================
+2. LOSS ANALİZİ (KRİTİK!)
+================================================================================
+
+UPDATE LOSS DEĞİŞİMLERİ:
+- Update 730: loss=771.07 ✅ (çok düşük!)
+- Update 740: loss=5363.30 ⚠️⚠️⚠️ (+595% artış, spike!)
+- Update 750: loss=2435.21 ⚠️ (740'tan sonra düşüş ama hala yüksek)
+- Update 760: loss=8269.50 🚨🚨🚨 (+239% artış, çok yüksek spike!)
+- Update 770: loss=2185.02 ✅ (760'tan sonra düşüş)
+- Update 780: loss=7157.13 ⚠️⚠️⚠️ (+228% artış, tekrar spike!)
+- Update 790: loss=4386.56 ⚠️ (780'tan sonra düşüş)
+- Update 800: loss=5809.39 ⚠️⚠️ (+32% artış)
+
+LOSS PATTERN:
+⚠️⚠️⚠️ ÇOK DALGALI! Büyük spike'lar var (740, 760, 780, 800)
+⚠️ Success rate ile loss arasında ters korelasyon var (daha önce gözlemlediğimiz gibi)
+⚠️ Loss çok yüksek değerlerde (2000-8000 aralığı)
+
+NEDEN SPIKE'LAR?
+1. Success episodes çok olunca loss artıyor
+2. Value function büyük reward'ları öğrenmeye çalışıyor
+3. Reward scaling çok yüksek (0.5x), düşürülmeli (0.25x veya 0.2x)
+
+================================================================================
+3. SUCCESS RATE TREND (UPDATE BAZLI)
+================================================================================
+
+UPDATE 730-740 (EP 624-710): 37/87 = %42.5
+UPDATE 740-750 (EP 710-800): 33/90 = %36.7 ⚠️ (düşüş)
+UPDATE 750-760 (EP 800-877): 26/77 = %33.8 ⚠️⚠️ (daha da düşüş)
+UPDATE 760-770 (EP 877-939): 37/62 = %59.7 ✅✅✅ (iyileşme!)
+UPDATE 770-780 (EP 939-996): 24/57 = %42.1 (normale dönüş)
+UPDATE 780-790 (EP 996-1057): 29/61 = %47.5 ✅ (iyileşme)
+UPDATE 790-800 (EP 1057-1120): 31/63 = %49.2 ✅✅ (iyileşme trendi)
+
+TREND ANALİZİ:
+⚠️ İlk 3 update range (730-760): Success rate düşüş trendi (%42.5 → %33.8)
+✅ Update 760-770: Güçlü toparlanma (%59.7)
+⚠️ Update 770-780: Normale dönüş (%42.1)
+✅ Update 780-800: İyileşme trendi (%47.5 → %49.2)
+
+GENEL: Success rate dalgalı ama genel olarak %40-50 aralığında stabil
+
+================================================================================
+4. CRASH ANALİZİ (ARTIŞ!)
+================================================================================
+
+CRASH RATE: 205/497 = %41.2
+
+ÖNCEKİ (Update 661-670): %23.7
+YENİ (Update 730-800): %41.2
+DEĞİŞİM: +%17.5 (+74% artış!) 🚨
+
+UPDATE BAZLI CRASH RATE:
+- Update 730-740: 35/87 = %40.2
+- Update 740-750: 42/90 = %46.7 ⚠️⚠️ (en yüksek!)
+- Update 750-760: 35/77 = %45.5 ⚠️ (yüksek)
+- Update 760-770: 18/62 = %29.0 ✅ (düşük, success yüksek)
+- Update 770-780: 23/57 = %40.4
+- Update 780-790: 22/61 = %36.1
+- Update 790-800: 30/63 = %47.6 ⚠️ (tekrar yükselme)
+
+CRASH VELOCITY ANALİZİ:
+- Çoğu crash: vy > 3.5 m/s (success threshold üstü)
+- En yüksek crash velocity: -9.0 m/s (EP 947)
+- Ortalama crash velocity: ~-5.0 m/s
+- Agent hız kontrolünü kaybediyor!
+
+GÖZLEM:
+⚠️ Crash rate çok arttı (%23.7 → %41.2)
+⚠️ Agent daha agresif iniş yapıyor (muhtemelen zone'a girmeye odaklanmış)
+⚠️ Hız kontrolü eksik (vy threshold 3.5 m/s ama çoğu crash >4.0 m/s)
+
+================================================================================
+5. MISSEDZONE ANALİZİ
+================================================================================
+
+MISSEDZONE RATE: 34/497 = %6.8
+
+ÖNCEKİ (Update 661-670): %8.5
+YENİ (Update 730-800): %6.8
+İYİLEŞME: -%1.7 (-20% azalma) ✅
+
+UPDATE BAZLI MISSEDZONE:
+- Update 730-740: 6/87 = %6.9
+- Update 740-750: 3/90 = %3.3 ✅✅ (çok iyi!)
+- Update 750-760: 3/77 = %3.9 ✅
+- Update 760-770: 4/62 = %6.5
+- Update 770-780: 6/57 = %10.5 ⚠️ (artış)
+- Update 780-790: 6/61 = %9.8 ⚠️ (yüksek)
+- Update 790-800: 6/63 = %9.5 ⚠️ (yüksek)
+
+MISSEDZONE DISTANCE ANALİZİ:
+- Zone'a yakın (8-10m): 12 episodes (%35) → Ceza: -136 to -225
+- Zone'a orta mesafe (11-15m): 10 episodes (%29) → Ceza: -261 to -352
+- Zone'a uzak (16-30m): 12 episodes (%35) → Ceza: -375 to -431
+
+PROGRESSIVE REWARD ÇALIŞIYOR:
+✅ Zone'a yakın MissedZone'lar düşük ceza alıyor
+✅ Zone'a uzak MissedZone'lar yüksek ceza alıyor
+✅ Agent zone'a yakın olmayı öğreniyor
+
+TREND:
+⚠️ Update 770-800 arası MissedZone arttı (%10.5, %9.8, %9.5)
+⚠️ Agent belki zone'a girmeye daha az odaklanıyor (crash'e odaklanmış olabilir)
+
+================================================================================
+6. OUTOFBOUNDS ANALİZİ
+================================================================================
+
+OUTOFBOUNDS RATE: 21/497 = %4.2
+
+ÖNCEKİ (Update 661-670): %8.5
+YENİ (Update 730-800): %4.2
+İYİLEŞME: -%4.3 (-51% azalma!) ✅✅✅
+
+UPDATE BAZLI OUTOFBOUNDS:
+- Update 730-740: 4/87 = %4.6
+- Update 740-750: 0/90 = %0.0 ✅✅✅ (hiç yok!)
+- Update 750-760: 2/77 = %2.6 ✅
+- Update 760-770: 2/62 = %3.2
+- Update 770-780: 4/57 = %7.0 ⚠️ (artış)
+- Update 780-790: 4/61 = %6.6 ⚠️ (yüksek)
+- Update 790-800: 5/63 = %7.9 ⚠️ (artış trendi)
+
+GÖZLEM:
+✅ Genel olarak OutOfBounds çok azaldı (%8.5 → %4.2)
+✅ Center bonus ve distance penalty çalışıyor!
+⚠️ Update 770-800 arası OutOfBounds arttı (trend)
+⚠️ Agent belki merkeze yakın kalmayı unutuyor
+
+================================================================================
+7. YENİ SORUNLAR: SPIN VE CEILINGHIT
+================================================================================
+
+SPIN: 17/497 = %3.4 ⚠️⚠️ (YENİ SORUN!)
+
+SPIN EPISODES:
+EP 972, 986, 990, 997, 1001, 1015, 1039, 1040, 1045, 1049, 1058, 1060, 1061, 1077, 1079, 1083, 1087, 1088, 1089, 1119
+
+SPIN PATTERN:
+- Çoğu spin: End height 4-30m aralığında
+- End velocity: pozitif veya düşük negatif
+- Agent roketi kontrol etmeyi kaybediyor!
+
+NEDEN SPIN?
+1. ⚠️ Agent belki çok agresif manevra yapıyor
+2. ⚠️ Angular velocity kontrolü eksik
+3. ⚠️ Spin threshold 4.5 rad/s, bazı spin'ler threshold altında ama yine de spin!
+
+CEILINGHIT: 3/497 = %0.6 ⚠️ (YENİ SORUN!)
+
+CEILINGHIT EPISODES:
+EP 988: End 50.0m, Vel 12.9 m/s, Ret -1368.6
+EP 1120: End 50.1m, Vel 11.8 m/s, Ret -1001.1
+EP 1124: End 50.2m, Vel 12.5 m/s, Ret -1148.2
+
+GÖZLEM:
+⚠️ Agent roketi çok yukarı fırlatıyor (50m ceiling'e çarpıyor!)
+⚠️ CeilingHit reward: -2737 (scaling sonrası -1368)
+⚠️ Bu çok büyük bir ceza, agent öğrenmeli
+
+================================================================================
+8. SUCCESS KALİTESİ ANALİZİ
+================================================================================
+
+SUCCESS RETURN ORTALAMASI: ~1085 (scaling sonrası, ham ~2170)
+
+SUCCESS VELOCITY ANALİZİ:
+- En yumuşak inişler: vy = -0.0 to -1.0 m/s (EP 645, 751, 802, 841, 964, 987, 1073, 1121, 1125)
+- Ortalama success velocity: ~-2.5 m/s
+- En sert success: vy = -3.5 m/s (threshold sınırında)
+
+SUCCESS DISTANCE ANALİZİ:
+- En merkeze yakın: dist_h = 0.5-1.0m (EP 720, 841, 964, 1125)
+- Ortalama success distance: ~4.2m
+- En uzak success: dist_h = 7.4-7.8m (EP 984, 1027, 1135)
+
+SUCCESS CLUSTERS:
+- EP 647-650: 4 success in a row! ✅✅
+- EP 717-721: 5 success in a row! ✅✅✅
+- EP 726-730: 5 success in a row! ✅✅✅
+- EP 755-760: 5 success in a row! ✅✅✅
+- EP 884-887: 4 success in a row! ✅✅
+- EP 1084-1086: 3 success in a row! ✅
+
+GÖZLEM:
+✅ Success kalitesi iyi (yumuşak inişler, merkeze yakın)
+✅ Success cluster'ları var (ardışık success'ler)
+✅ Agent başarıya ulaşmayı biliyor!
+
+================================================================================
+9. ÖNEMLİ GÖZLEMLER
+================================================================================
+
+1. ✅✅✅ MISSEDZONE VE OUTOFBOUNDS AZALDI:
+   - MissedZone: %8.5 → %6.8 (-20%)
+   - OutOfBounds: %8.5 → %4.2 (-51%)
+   - İyileştirmeler çalışıyor!
+
+2. ⚠️⚠️⚠️ CRASH RATE ARTTI:
+   - %23.7 → %41.2 (+74%!)
+   - Agent daha agresif iniş yapıyor
+   - Hız kontrolü eksik
+
+3. ⚠️⚠️ LOSS DALGALI:
+   - Büyük spike'lar (740, 760, 780, 800)
+   - Reward scaling düşürülmeli (0.5x → 0.25x)
+
+4. ⚠️⚠️ YENİ SORUNLAR:
+   - Spin: %3.4 (angular velocity kontrolü eksik)
+   - CeilingHit: %0.6 (agent roketi çok yukarı fırlatıyor)
+
+5. ✅ SUCCESS RATE STABİL:
+   - %40-50 aralığında
+   - Dalgalı ama genel trend iyi
+
+================================================================================
+10. UPDATE BAZLI DETAYLI ANALİZ
+================================================================================
+
+UPDATE 730-740 (EP 624-710):
+- Success: 37/87 = %42.5
+- Crash: 35/87 = %40.2
+- MissedZone: 6/87 = %6.9
+- OutOfBounds: 4/87 = %4.6
+- Spin: 0/87 = %0.0
+- CeilingHit: 0/87 = %0.0
+- Loss: 771.07 → 5363.30 (büyük spike!)
+
+UPDATE 740-750 (EP 710-800):
+- Success: 33/90 = %36.7 ⚠️ (düşüş)
+- Crash: 42/90 = %46.7 ⚠️⚠️ (en yüksek!)
+- MissedZone: 3/90 = %3.3 ✅ (en düşük)
+- OutOfBounds: 0/90 = %0.0 ✅✅ (hiç yok!)
+- Spin: 0/90 = %0.0
+- CeilingHit: 0/90 = %0.0
+- Loss: 5363.30 → 2435.21 (düşüş ama hala yüksek)
+
+UPDATE 750-760 (EP 800-877):
+- Success: 26/77 = %33.8 ⚠️⚠️ (en düşük!)
+- Crash: 35/77 = %45.5 ⚠️ (yüksek)
+- MissedZone: 3/77 = %3.9 ✅
+- OutOfBounds: 2/77 = %2.6 ✅
+- Spin: 0/77 = %0.0
+- CeilingHit: 0/77 = %0.0
+- Loss: 2435.21 → 8269.50 (büyük spike!)
+
+UPDATE 760-770 (EP 877-939):
+- Success: 37/62 = %59.7 ✅✅✅ (en yüksek!)
+- Crash: 18/62 = %29.0 ✅ (en düşük!)
+- MissedZone: 4/62 = %6.5
+- OutOfBounds: 2/62 = %3.2
+- Spin: 1/62 = %1.6 (ilk spin!)
+- CeilingHit: 0/62 = %0.0
+- Loss: 8269.50 → 2185.02 (büyük düşüş!)
+
+UPDATE 770-780 (EP 939-996):
+- Success: 24/57 = %42.1
+- Crash: 23/57 = %40.4
+- MissedZone: 6/57 = %10.5 ⚠️ (artış)
+- OutOfBounds: 4/57 = %7.0 ⚠️ (artış)
+- Spin: 0/57 = %0.0
+- CeilingHit: 1/57 = %1.8 (ilk CeilingHit!)
+- Loss: 2185.02 → 7157.13 (büyük spike!)
+
+UPDATE 780-790 (EP 996-1057):
+- Success: 29/61 = %47.5 ✅ (iyileşme)
+- Crash: 22/61 = %36.1 ✅ (düşüş)
+- MissedZone: 6/61 = %9.8 ⚠️ (yüksek)
+- OutOfBounds: 4/61 = %6.6 ⚠️ (yüksek)
+- Spin: 0/61 = %0.0
+- CeilingHit: 0/61 = %0.0
+- Loss: 7157.13 → 4386.56 (düşüş)
+
+UPDATE 790-800 (EP 1057-1120):
+- Success: 31/63 = %49.2 ✅✅ (iyileşme trendi)
+- Crash: 30/63 = %47.6 ⚠️ (artış)
+- MissedZone: 6/63 = %9.5 ⚠️ (yüksek)
+- OutOfBounds: 5/63 = %7.9 ⚠️ (artış)
+- Spin: 8/63 = %12.7 ⚠️⚠️⚠️ (çok yüksek artış!)
+- CeilingHit: 2/63 = %3.2 ⚠️ (artış!)
+- Loss: 4386.56 → 5809.39 (artış)
+
+================================================================================
+11. ÖNERİLER
+================================================================================
+
+1. ✅✅✅ REWARD SCALING DÜŞÜR (ÇOK ÖNEMLİ!):
+   - Şu an: 0.5x
+   - Öneri: 0.25x veya 0.2x
+   - Etki: Loss dalgalanması azalır, value function daha stabil öğrenir
+
+2. ✅ CRASH KONTROLÜ:
+   - Crash rate çok yüksek (%41.2)
+   - Hız kontrolünü güçlendir (slow descent bonus artır)
+   - Yüksek hız cezasını artır
+
+3. ⚠️ SPIN KONTROLÜ:
+   - Spin rate arttı (%3.4, Update 790-800'de %12.7!)
+   - Angular velocity penalty artır
+   - Spin threshold kontrolü iyileştir
+
+4. ⚠️ CEILINGHIT KONTROLÜ:
+   - CeilingHit rate düşük ama artış trendi var (%0.6 → %3.2)
+   - CeilingHit penalty yeterli (-2737 ham, -1368 scaling sonrası)
+   - Belki ceiling height kontrolü ekle
+
+5. ✅ DEVAM ET:
+   - Success rate stabil (%40-50)
+   - MissedZone ve OutOfBounds azaldı
+   - Training'e devam et ama reward scaling düşür
+
+================================================================================
+12. SONUÇ
+================================================================================
+
+✅ BAŞARILAR:
+- MissedZone azaldı (%8.5 → %6.8, -20%)
+- OutOfBounds azaldı (%8.5 → %4.2, -51%)
+- Success rate stabil (%40-50 aralığında)
+- Success kalitesi iyi (yumuşak inişler, merkeze yakın)
+
+⚠️ SORUNLAR:
+- Crash rate arttı (%23.7 → %41.2, +74%)
+- Loss çok dalgalı (büyük spike'lar)
+- Spin ortaya çıktı (%3.4, Update 790-800'de %12.7!)
+- CeilingHit ortaya çıktı (%0.6, Update 790-800'de %3.2!)
+
+ÖNERİLER:
+1. ✅ Reward scaling düşür (0.5x → 0.25x) - ÖNCELİKLİ!
+2. ⚠️ Crash kontrolü güçlendir
+3. ⚠️ Spin kontrolü ekle
+4. ✅ Training'e devam et
+
+GENEL DEĞERLENDİRME: ⚠️⚠️⚠️ ORTA-KRİTİK
+- İyileştirmeler çalışıyor (MissedZone, OutOfBounds azaldı)
+- Ama yeni sorunlar ortaya çıktı (Crash, Spin, CeilingHit arttı)
+- Reward scaling düşürülmeli (loss spike'ları çözmek için)
+- Agent genel olarak öğreniyor ama bazı kontrol problemleri var
+
+================================================================================
+

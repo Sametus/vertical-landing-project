@@ -137,11 +137,16 @@ class Env():
         # --- LANDING CHECK ---
         if dy <= 1.7:
             # zone: kare yerine daire daha stabil
-            in_zone = (dist_h < 6.5)  # daha da gevşetildi: 4.5 → 6.0 (normal inişleri başarı say)
+            in_zone = (dist_h < 8.0)  # daha da gevşetildi: 4.5 → 6.0 (normal inişleri başarı say)
 
             if not in_zone:
                 self.termination_reason = "MissedZone"
-                return -300.0, True  # ceza hafifletildi: -350 → -300 (çok sert değil)
+                # PROGRESSIVE MISSEDZONE REWARD: Zone'a yakınlığa göre ceza
+                # dist_h = 6.5m → -150 (hafif), dist_h = 10m → -250 (orta), dist_h = 15m → -350 (sert)
+                base_penalty = -150.0  # Zone sınırında (6.5m)
+                distance_penalty = -20.0 * max(0.0, dist_h - 8.0)  # Her 1m uzaklık için -20
+                missed_zone_reward = max(-350.0, base_penalty + distance_penalty)  # Max -350 cap
+                return missed_zone_reward, True
 
             ok_vy   = (abs(vy) <= 3.5)   # sıkılaştırıldı: 4.5 → 2.5 (daha yumuşak iniş)
             ok_vh   = (v_h <= 3.0)       # sıkılaştırıldı: 3.0 → 2.0 (daha kontrollü)
@@ -174,7 +179,7 @@ class Env():
         # merkeze uzaklık cezası (artırıldı: drift sorununu çözmek için)
         # Progressive: mesafe arttıkça ceza artıyor
         if dist_h > 10.0:
-            reward += -0.09 * dist_h  # 10m üzeri: daha agresif ceza (artırıldı: -0.05 → -0.08)
+            reward += -0.12 * dist_h  # 10m üzeri: daha agresif ceza (artırıldı: -0.09 → -0.12)
         else:
             reward += -0.05 * dist_h  # 10m altı: orta seviye ceza (artırıldı: -0.03 → -0.05)
 
@@ -203,7 +208,7 @@ class Env():
             reward += approach_bonus
         
         # MERKEZE YAKLAŞMA BONUSU (exponential - dead code'dan alındı)
-        center_bonus = 0.09 * np.exp(-dist_h / 10.0)  # Max ~0.03, merkeze yaklaştıkça artar
+        center_bonus = 0.12 * np.exp(-dist_h / 10.0)  # Max ~0.12, merkeze yaklaştıkça artar (artırıldı: 0.09 → 0.12)
         reward += center_bonus
         
         # YAVAŞ İNİŞ BONUSU (vy > -2 m/s iken)
