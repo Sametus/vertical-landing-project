@@ -1,0 +1,301 @@
+================================================================================
+TRAINING ANALİZİ: Update 781-820 (EP 1-322) - CEILINGHIT GERİ DÖNDÜ!
+================================================================================
+
+ARALIK: Update 781 → 820 (40 updates, ~320 episodes)
+ZAMAN: 21:04:11 - 21:19:54 (yaklaşık 15.7 dakika)
+DURUM: Yeni env.py değişiklikleri ile training, ancak CeilingHit geri döndü!
+
+================================================================================
+1. CEILINGHIT GERİ DÖNDÜ! ⚠️⚠️⚠️
+================================================================================
+
+CEILINGHIT TRENDİ:
+- Update 781-790: 0 episode (%0.0) ✅ (İyi başlangıç)
+- Update 791-800: ~2 episodes (%2-3) ⚠️ (Başladı)
+- Update 801-810: ~6 episodes (%8-10) ⚠️ (Arttı)
+- Update 811-820: ~13 episodes (%18-20!) ⚠️⚠️ (PATLAMA!)
+
+TOPLAM CEILINGHIT (EP 184-322): ~21 episodes (%8.3)
+
+CEILINGHIT ÖRNEKLERİ:
+- EP 184: Start 6.4m → End 60.1m, Vel 13.6 m/s (düşük başlangıçtan ceiling!)
+- EP 187: Start 7.3m → End 60.2m, Vel 15.4 m/s
+- EP 189: Start 16.4m → End 60.1m, Vel 14.4 m/s (yüksek başlangıçtan ceiling!)
+- EP 199: Start 14.9m → End 60.3m, Vel 16.6 m/s (yüksek başlangıç!)
+- EP 200: Start 15.7m → End 60.2m, Vel 15.2 m/s (yüksek başlangıç!)
+- EP 204: Start 15.6m → End 60.1m, Vel 16.4 m/s (yüksek başlangıç!)
+- EP 211: Start 16.0m → End 60.3m, Vel 16.7 m/s (yüksek başlangıç!)
+- EP 216: Start 15.2m → End 60.2m, Vel 17.1 m/s (yüksek başlangıç!)
+- EP 219: Start 15.8m → End 60.0m, Vel 15.4 m/s (yüksek başlangıç!)
+- EP 222: Start 15.4m → End 60.3m, Vel 16.8 m/s (yüksek başlangıç!)
+- EP 225: Start 14.6m → End 60.3m, Vel 16.4 m/s (yüksek başlangıç!)
+- EP 228: Start 16.1m → End 60.2m, Vel 14.6 m/s (yüksek başlangıç!)
+- EP 230: Start 16.3m → End 60.1m, Vel 16.0 m/s (yüksek başlangıç!)
+
+UPDATE 811-820 CEILINGHIT PATLAMASI:
+- EP 310: Start 3.8m → End 60.2m, Vel 14.1 m/s (DÜŞÜK başlangıçtan ceiling!)
+- EP 311: Start 3.8m → End 60.2m, Vel 11.3 m/s (DÜŞÜK başlangıçtan ceiling!)
+- EP 313: Start 6.9m → End 60.0m, Vel 4.8 m/s (DÜŞÜK başlangıçtan ceiling!)
+- EP 315: Start 2.0m → End 60.1m, Vel 8.6 m/s (ÇOK DÜŞÜK başlangıçtan ceiling!)
+- EP 316: Start 7.9m → End 60.0m, Vel 8.8 m/s
+- EP 317: Start 9.7m → End 60.0m, Vel 9.7 m/s
+- EP 318: Start 4.2m → End 60.0m, Vel 9.9 m/s
+
+PATTERN:
+1. Yüksek başlangıçlardan (15-16m) ceiling'e çıkıyor (reward hacking)
+2. Düşük başlangıçlardan (2-8m) bile ceiling'e çıkıyor (çok kritik!)
+3. Vertical velocity: 8-17 m/s (yukarı doğru)
+4. Update 811-820'de özellikle düşük başlangıçlardan ceiling'e çıkma arttı
+
+ROOT CAUSE: Agent yine reward function'ı exploit ediyor!
+            CeilingHit threshold 50m'ye düşürüldü ama yeterli değil.
+
+================================================================================
+2. EPISODE TERMINATION İSTATİSTİKLERİ (EP 1-322)
+================================================================================
+
+TERMINATION REASONS:
+- Success:     ~70 episodes  (%21.7) ✅ (İyi ama düşüş var)
+- Crash:       ~55 episodes  (%17.1) ✅
+- Spin:        ~115 episodes (%35.7) ⚠️⚠️ (ÇOK YÜKSEK!)
+- MissedZone:  ~25 episodes  (%7.8) ✅
+- OutOfBounds: ~45 episodes  (%14.0) ⚠️
+- CeilingHit:  ~21 episodes  (%6.5) ⚠️⚠️ (GERİ DÖNDÜ!)
+- Tilted:      0 episodes    (%0.0)
+- TimeLimit:   ~1 episode    (%0.3)
+
+TOPLAM: ~322 episodes
+
+================================================================================
+3. SUCCESS ANALİZİ
+================================================================================
+
+SUCCESS RATE TRENDİ:
+- Update 781-790: %24.4 ✅
+- Update 791-800: %22-23 ✅
+- Update 801-810: %18-20 ⚠️ (Düşüş)
+- Update 811-820: %15-18 ⚠️ (Daha da düşüş)
+
+OVERALL SUCCESS RATE: %21.7
+
+SUCCESS BAŞLANGIÇ YÜKSEKLİĞİ:
+- Çok düşük (1.7-3m): ~30 success (%43)
+- Düşük (3-6m):       ~25 success (%36)
+- Orta (6-10m):       ~12 success (%17)
+- Yüksek (10-15m):    ~3 success  (%4) ⚠️
+- Çok yüksek (15-20m): ~0 success  (%0) ⚠️
+
+SONUÇ: Yüksek başlangıçlardan (15-20m) hala hiç success yok.
+       Agent yüksek başlangıçlardan ya Spin ya CeilingHit oluyor.
+
+================================================================================
+4. SPIN RATE ÇOK YÜKSEK (%35.7)
+================================================================================
+
+SPIN TRENDİ:
+- Update 781-790: %47.2 ⚠️
+- Update 791-800: %40-45 ⚠️
+- Update 801-820: %30-35 ⚠️
+
+Hafif iyileşme var ama hala çok yüksek.
+
+SPIN ÖRNEKLERİ:
+- Çoğunlukla yüksek başlangıçlardan (13-17m)
+- Bazıları düşük başlangıçtan yukarı çıkıp Spin (EP 53, 64, 114, 165, 175, 182, 191)
+
+PATTERN: Angular velocity kontrolü yetersiz.
+
+================================================================================
+5. OUTOFBOUNDS ANALİZİ
+================================================================================
+
+OUTOFBOUNDS RATE: %14.0 (Update 781-790'da %11.1 idi, arttı)
+
+OUTOFBOUNDS ÖRNEKLERİ:
+- EP 121: End 48.3m (ceiling yakını)
+- EP 141: End 36.1m
+- EP 152: End 43.6m
+- EP 157: End 47.7m (ceiling yakını)
+- EP 290: End 57.3m (CEILING YAKINI!)
+- EP 300: End 50.7m (CEILING YAKINI!)
+- EP 305: End 46.1m
+- EP 320: End 54.6m (CEILING YAKINI!)
+
+PATTERN: Bazı OutOfBounds'lar ceiling yakınında bitiyor (50-57m).
+         Bunlar CeilingHit olarak kaydedilmeliydi ama OutOfBounds olarak işaretlenmiş.
+
+SORUN: CeilingHit kontrolü OutOfBounds'ten SONRA yapılıyor!
+       OutOfBounds kontrolü (abs(dx) >= 35.0 or abs(dz) >= 35.0) önce çalışıyor.
+
+================================================================================
+6. LOSS ANALİZİ
+================================================================================
+
+LOSS TRENDİ:
+- Update 790: loss=266.97 ✅ (Düşük)
+- Update 800: loss=840.54 ⚠️ (Arttı - CeilingHit başladığında)
+- Update 810: loss=1479.39 ⚠️⚠️ (Çok arttı!)
+- Update 820: loss=101.37 ✅ (Düşük - anormal!)
+
+ENTROPY:
+- Update 790: ent=6.47
+- Update 820: ent=6.53 (Biraz arttı - exploration devam ediyor)
+
+KL DIVERGENCE:
+- Update 790: kl=0.0034 (Düşük)
+- Update 810: kl=-0.0006 (NEGATIF! Policy geriye gitti!) ⚠️
+- Update 820: kl=0.0124 (İyileşti)
+
+PATTERN:
+- Update 810'da KL divergence negatif → Policy geriye gitti (kötü!)
+- Loss çok değişken (101-1479 arası)
+
+================================================================================
+7. CEILINGHIT KONTROL SIRASI SORUNU
+================================================================================
+
+⚠️ KRİTİK SORUN TESPİT EDİLDİ!
+
+ÖRNEK 1: EP 180
+- End: 57.1m (ceiling yakını!)
+- Vel: 14.4 m/s (yukarı)
+- Termination: OutOfBounds ❌ (CeilingHit olmalıydı!)
+
+ÖRNEK 2: EP 290
+- End: 57.3m (ceiling yakını!)
+- Vel: 6.2 m/s
+- Termination: OutOfBounds ❌ (CeilingHit olmalıydı!)
+
+ÖRNEK 3: EP 300
+- End: 50.7m (ceiling threshold'u aştı!)
+- Vel: 7.5 m/s (yukarı)
+- Termination: OutOfBounds ❌ (CeilingHit olmalıydı!)
+
+SEBEP:
+```python
+# Mevcut sıra (YANLIŞ!):
+if abs(dx) >= 35.0 or abs(dz) >= 35.0:  # ÖNCE
+    return OutOfBounds
+if dy >= 50.0 and vy > 0.3:  # SONRA (hiç çalışmıyor!)
+    return CeilingHit
+```
+
+ÇÖZÜM:
+```python
+# CeilingHit kontrolünü ÖNCE yap:
+if dy >= 50.0 and vy > 0.3:  # ÖNCE
+    return CeilingHit
+if abs(dx) >= 35.0 or abs(dz) >= 35.0:  # SONRA
+    return OutOfBounds
+```
+
+================================================================================
+8. CEILINGHIT GERİ DÖNME NEDENLERİ
+================================================================================
+
+1. ⚠️ CEILINGHIT KONTROL SIRASI YANLIŞ:
+   - OutOfBounds kontrolü CeilingHit'ten önce yapılıyor
+   - Bazı ceiling durumları OutOfBounds olarak kaydediliyor
+   - Agent bu durumlardan öğrenemiyor
+
+2. ⚠️ CEILINGHIT THRESHOLD YETERLİ DEĞİL:
+   - 50m threshold var ama agent 50m'ye çıkmadan önce OutOfBounds oluyor
+   - Veya threshold daha da düşürülmeli (50 → 45 veya 40)
+
+3. ⚠️ UPWARD PENALTY YETERLİ DEĞİL:
+   - 0.30 * vy * (dy / 30.0) hala yeterli değil
+   - Agent düşük başlangıçtan bile ceiling'e çıkıyor
+   - Coefficient artırılmalı: 0.30 → 0.50
+
+4. ⚠️ YÜKSEK İRTİFA CEZASI YETERLİ DEĞİL:
+   - dy > 30.0 için -0.05 * (dy - 30.0) çok düşük
+   - Agent 50m'ye çıkmadan önce yeterince ceza almıyor
+   - Coefficient artırılmalı: 0.05 → 0.10
+
+================================================================================
+9. KRİTİK SORUNLAR
+================================================================================
+
+1. ⚠️⚠️⚠️ CEILINGHIT GERİ DÖNDÜ (%0 → %8.3)
+   - Update 781-790'da 0 idi
+   - Update 811-820'de %18-20 (PATLAMA!)
+   - Özellikle düşük başlangıçlardan ceiling'e çıkma (EP 310-318)
+
+2. ⚠️ CEILINGHIT KONTROL SIRASI YANLIŞ
+   - OutOfBounds kontrolü CeilingHit'ten önce
+   - Bazı ceiling durumları OutOfBounds olarak kaydediliyor
+
+3. ⚠️ SPIN RATE ÇOK YÜKSEK (%35.7)
+   - Angular velocity kontrolü yetersiz
+
+4. ⚠️ SUCCESS RATE DÜŞÜŞ
+   - %24.4 → %21.7 (hafif düşüş)
+
+5. ⚠️ KL DIVERGENCE NEGATIF (Update 810)
+   - Policy geriye gitti (çok kötü!)
+
+================================================================================
+10. ACİL ÖNERİLER
+================================================================================
+
+1. CEILINGHIT KONTROL SIRASI DÜZELT (ACİL!):
+```python
+# CeilingHit kontrolünü OutOfBounds'ten ÖNCE yap
+if dy >= 50.0 and vy > 0.3:
+    return CeilingHit
+if abs(dx) >= 35.0 or abs(dz) >= 35.0:
+    return OutOfBounds
+```
+
+2. CEILINGHIT THRESHOLD DÜŞÜR:
+```python
+# 50.0 → 45.0 (daha erken yakala)
+if dy >= 45.0 and vy > 0.3:
+    return CeilingHit
+```
+
+3. UPWARD PENALTY ARTIR:
+```python
+# 0.30 → 0.50 (daha agresif)
+up_penalty = 0.50 * vy * (dy / 30.0)
+```
+
+4. YÜKSEK İRTİFA CEZASI ARTIR:
+```python
+# 0.05 → 0.10 (2x artır)
+if dy > 30.0:
+    high_altitude_penalty = -0.10 * (dy - 30.0)
+```
+
+5. SPIN PENALTY ARTIR:
+```python
+# -0.03 → -0.05
+reward += -0.05 * w_mag
+```
+
+================================================================================
+11. SONUÇ
+================================================================================
+
+❌ CEILINGHIT GERİ DÖNDÜ!
+
+Update 781-790'da çözülmüş gibi göründü (0 episode) ama Update 800'den sonra
+tekrar başladı ve Update 811-820'de patladı (%18-20).
+
+ANA NEDENLER:
+1. CeilingHit kontrol sırası yanlış (OutOfBounds'ten önce olmalı)
+2. CeilingHit threshold yeterli değil (50m → 45m olmalı)
+3. Upward penalty yeterli değil (0.30 → 0.50 olmalı)
+4. Yüksek irtifa cezası yeterli değil (0.05 → 0.10 olmalı)
+
+ACİL AKSIYON GEREKLİ:
+1. CeilingHit kontrol sırasını düzelt
+2. CeilingHit threshold'u düşür (50 → 45)
+3. Upward penalty artır (0.30 → 0.50)
+4. Yüksek irtifa cezası artır (0.05 → 0.10)
+
+Bu değişiklikler yapılmadan training devam etmemeli!
+
+================================================================================
+

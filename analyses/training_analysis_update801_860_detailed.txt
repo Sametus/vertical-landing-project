@@ -1,0 +1,230 @@
+================================================================================
+TRAINING ANALİZİ: Update 801-860 (EP 1-425) - DETAYLI ANALİZ
+================================================================================
+
+ARALIK: Update 801 → 860 (60 updates, ~425 episodes)
+ZAMAN: 20:26:53 - 20:51:33 (yaklaşık 24.7 dakika)
+DURUM: Update 800'den devam, medium stage (5-20m) training
+
+================================================================================
+1. EPISODE TERMINATION İSTATİSTİKLERİ (EP 1-425)
+================================================================================
+
+TERMINATION REASONS:
+- Success:     ~95 episodes  (%22.4) ✅
+- Crash:       ~65 episodes  (%15.3)
+- Spin:        ~95 episodes  (%22.4) ⚠️
+- MissedZone:  ~35 episodes  (%8.2)
+- OutOfBounds: ~90 episodes  (%21.2) ⚠️
+- CeilingHit:  ~35 episodes  (%8.2) ⚠️
+- Tilted:      ~5 episodes   (%1.2)
+- TimeLimit:   ~5 episodes   (%1.2)
+
+TOPLAM: ~425 episodes
+
+================================================================================
+2. SUCCESS ANALİZİ
+================================================================================
+
+A) SUCCESS RATE TRENDİ:
+   Update 801-810: ~30% (iyi başlangıç)
+   Update 811-820: ~25% (hafif düşüş)
+   Update 821-830: ~20% (düşüş)
+   Update 831-840: ~18% (daha da düşüş)
+   Update 841-850: ~12% (ciddi düşüş)
+   Update 851-860: ~8% (çok düşük!) ⚠️
+
+B) SUCCESS BAŞLANGIÇ YÜKSEKLİĞİ ANALİZİ:
+   - Çok düşük (1.7-3m): ~40 success (%42)
+   - Düşük (3-6m):       ~30 success (%32)
+   - Orta (6-10m):       ~20 success (%21)
+   - Yüksek (10-15m):    ~5 success  (%5) ⚠️
+   - Çok yüksek (15-20m): ~0 success  (%0) ⚠️
+
+   SONUÇ: Agent sadece düşük başlangıçlardan başarılı!
+           Yüksek başlangıçlardan (15-20m) hiç başarı yok.
+
+================================================================================
+3. CEILINGHIT PATLAMASI (Update 860 civarı)
+================================================================================
+
+CEILINGHIT TRENDİ:
+- Update 801-850: ~10 episodes (%2-3) ✅
+- Update 851-860: ~25 episodes (%25!) ⚠️⚠️⚠️
+
+CEILINGHIT ÖRNEKLERİ:
+- EP 339: Start 7.4m → End 60.1m, Vel 6.5 m/s
+- EP 357: Start 7.4m → End 60.1m, Vel 6.5 m/s
+- EP 358: Start 4.8m → End 60.1m, Vel 10.8 m/s ⚠️
+- EP 364: Start 8.6m → End 60.0m, Vel 8.7 m/s
+- EP 365: Start 7.1m → End 60.0m, Vel 5.8 m/s
+- EP 366-392: Sürekli CeilingHit! ⚠️
+
+PATTERN:
+- Düşük başlangıçtan (3-9m) başlayıp ceiling'e çıkıyor
+- Yatay drift var (End x/z: 5-30m arası)
+- Vertical velocity: 5-12 m/s (yukarı doğru)
+
+ROOT CAUSE: Reward hacking - agent düşükten başlayıp yukarı kaçıyor!
+
+================================================================================
+4. OUTOFBOUNDS PATLAMASI (Update 840-860)
+================================================================================
+
+OUTOFBOUNDS TRENDİ:
+- Update 801-840: ~15 episodes/update (%15-20)
+- Update 841-860: ~30 episodes/update (%30-35!) ⚠️
+
+OUTOFBOUNDS ÖRNEKLERİ:
+- EP 314: End 40.2m (sınır 35m)
+- EP 317: End 35.2m
+- EP 320-322: Sürekli OutOfBounds
+- EP 325-333: Sürekli OutOfBounds
+- EP 341-350: Çok fazla OutOfBounds
+
+PATTERN:
+- Horizontal drift kontrolü çökmüş
+- End x/z değerleri 35-50m arası
+- Bazıları ceiling'e çıkarken OutOfBounds
+
+ROOT CAUSE: Agent kontrolünü kaybetmiş, drift yapıyor.
+
+================================================================================
+5. SPIN RATE YÜKSEK
+================================================================================
+
+SPIN TRENDİ:
+- Update 801-810: ~20% (kabul edilebilir)
+- Update 811-860: ~25-30% (yüksek!) ⚠️
+
+SPIN ÖRNEKLERİ:
+- EP 1-71: Çok fazla Spin (özellikle yüksek başlangıçlardan)
+- EP 252-275: Spin patlaması
+- EP 300-302: Sürekli Spin
+
+PATTERN:
+- Yüksek başlangıç (15-20m) → Spin
+- Düşük başlangıç → Bazen Spin (control loss)
+- Angular velocity kontrolü yetersiz
+
+================================================================================
+6. MISSEDZONE RATE
+================================================================================
+
+MISSEDZONE TRENDİ:
+- Update 801-860: ~8-10% (kabul edilebilir)
+
+MISSEDZONE ÖRNEKLERİ:
+- EP 283: End 32.5m (8m threshold)
+- EP 323: End 28.5m
+- EP 328: End 23.3m
+
+PATTERN:
+- Horizontal drift, zone'u kaçırıyor
+- Ancak CeilingHit ve OutOfBounds'den daha az kritik
+
+================================================================================
+7. LOSS ANALİZİ
+================================================================================
+
+LOSS TRENDİ:
+- Update 810: loss=70.29 ✅ (çok düşük - anormal!)
+- Update 820: loss=3429.05 ⚠️ (yüksek)
+- Update 830: loss=3632.81 ⚠️ (yüksek)
+- Update 840: loss=997.31 ✅ (orta)
+- Update 850: loss=136.73 ✅ (düşük)
+- Update 860: loss=183.08 ✅ (düşük)
+
+ENTROPY:
+- Update 810: ent=6.50 (normal)
+- Update 860: ent=6.60 (biraz arttı - exploration devam ediyor)
+
+KL DIVERGENCE:
+- Update 810: kl=0.0060 (düşük - policy değişimi az)
+- Update 860: kl=0.0018 (çok düşük - policy neredeyse durdu)
+
+PATTERN:
+- Loss çok değişken (70-3632 arası)
+- Update 850-860'da loss düşük ama performans kötü
+- KL divergence çok düşük → Policy güncellemeleri etkisiz!
+
+================================================================================
+8. KRİTİK SORUNLAR
+================================================================================
+
+1. CEILINGHIT PATLAMASI (Update 860):
+   - Agent reward hacking yapıyor
+   - Düşük başlangıçtan ceiling'e çıkıyor
+   - Vertical velocity penalty stratejisi başarısız
+   
+2. SUCCESS RATE DÜŞÜŞÜ:
+   - %30'dan %8'e düştü
+   - Sadece düşük başlangıçlardan success
+   - Yüksek başlangıçlardan (15-20m) hiç success yok
+
+3. OUTOFBOUNDS PATLAMASI:
+   - Horizontal drift kontrolü çökmüş
+   - Update 840-860'da sürekli OutOfBounds
+
+4. KL DIVERGENCE ÇOK DÜŞÜK:
+   - Policy güncellemeleri etkisiz
+   - Agent öğrenemiyor veya yanlış yönde öğreniyor
+
+5. LOSS ÇOK DEĞİŞKEN:
+   - 70-3632 arası değişiyor
+   - Training istikrarsız
+
+================================================================================
+9. ÖNERİLER
+================================================================================
+
+ACİL ÖNLEMLER:
+
+1. CEILINGHIT ÖNLEME:
+   - Upward movement penalty artır: 0.20 → 0.40
+   - Height penalty güçlendir: threshold 20 → 15, coef 0.08 → 0.12
+   - Yüksek irtifa için ekstra ceza: dy > 30.0 için -0.05 * (dy - 30.0)
+   - CeilingHit threshold düşür: 60.0 → 50.0
+
+2. REWARD SCALING AZALT:
+   - 0.5x → 0.25x (loss değişkenliğini azaltır)
+
+3. KL DIVERGENCE SORUNU:
+   - Learning rate artır (policy güncellemeleri daha etkili olsun)
+   - Veya clip_eps azalt (daha agresif güncellemeler)
+
+4. OUTOFBOUNDS KONTROLÜ:
+   - Horizontal velocity penalty artır
+   - Distance penalty artır (dist_h > 15.0 için)
+   - Center bonus artır (merkeze yaklaşmayı ödüllendir)
+
+5. ROLLOUT_LEN AYARLAMA:
+   - 1024 → 1800 step (30 episode/update için)
+
+6. CHECKPOINT SEÇİMİ:
+   - Update 840'a geri dön (CeilingHit patlaması öncesi)
+   - Veya Update 820'ye geri dön (daha stabil görünüyor)
+
+================================================================================
+10. SONUÇ
+================================================================================
+
+❌ TRAINING ÇÖKMÜŞ!
+
+- Success rate: %30 → %8 (ciddi düşüş)
+- CeilingHit: %2 → %25 (patlama!)
+- OutOfBounds: %15 → %35 (patlama!)
+- KL divergence: 0.006 → 0.0018 (policy güncellemeleri etkisiz)
+
+ROOT CAUSE:
+Agent reward function'ı exploit ediyor (reward hacking).
+Düşük başlangıçtan ceiling'e çıkıyor, penalty'leri azaltmak için.
+
+ÇÖZÜM:
+1. CeilingHit önleme önlemleri (yukarıdaki öneriler)
+2. Reward scaling azalt
+3. Update 820-840 arası checkpoint'e geri dön
+4. Training'i yeniden başlat
+
+================================================================================
+

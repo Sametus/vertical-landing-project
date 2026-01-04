@@ -117,13 +117,13 @@ class Env():
 
         # --- TERMINAL ---
         # Ceiling: Daha erken yakala ve çok sert cezalandır (yukarı kaçmayı önle)
-        if dy >= 60.0 and vy > 0.3:  # Threshold düşürüldü: 75→50, 0.5→0.3
+        if dy >= 50.0 and vy > 0.3:  # Threshold düşürüldü: 60→50 (reward hacking önleme)
             self.termination_reason = "CeilingHit"
-            return -1000.0, True  # Penalty 2x artırıldı: -500 → -1000
+            return -1200.0, True  # Penalty artırıldı: -1000 → -1200
 
         if abs(dx) >= 35.0 or abs(dz) >= 35.0:  # Sınır genişletildi: 25m → 30m
             self.termination_reason = "OutOfBounds"
-            return -650.0, True  # Cezası artırıldı: -500 → -600
+            return -675.0, True  # Cezası artırıldı: -500 → -600
 
         # Tilt: low'da çok devrildiyse bitir
         if up_y < 0.35:
@@ -132,19 +132,19 @@ class Env():
 
         if w_mag > 8.0:
             self.termination_reason = "Spin"
-            return -510.0, True
+            return -650.0, True
 
         # --- LANDING CHECK ---
         if dy <= 1.7:
             # zone: kare yerine daire daha stabil
-            in_zone = (dist_h < 8.5)  # daha da gevşetildi: 4.5 → 6.0 (normal inişleri başarı say)
+            in_zone = (dist_h < 15.0)  # daha da gevşetildi: 4.5 → 6.0 (normal inişleri başarı say)
 
             if not in_zone:
                 self.termination_reason = "MissedZone"
                 # PROGRESSIVE MISSEDZONE REWARD: Zone'a yakınlığa göre ceza
                 # dist_h = 6.5m → -150 (hafif), dist_h = 10m → -250 (orta), dist_h = 15m → -350 (sert)
                 base_penalty = -150.0  # Zone sınırında (6.5m)
-                distance_penalty = -25.0 * max(0.0, dist_h - 8.5)  # Her 1m uzaklık için -20
+                distance_penalty = -30.0 * max(0.0, dist_h - 8.5)  # Her 1m uzaklık için -20
                 missed_zone_reward = max(-350.0, base_penalty + distance_penalty)  # Max -350 cap
                 return missed_zone_reward, True
 
@@ -154,7 +154,7 @@ class Env():
             ok_spin = (w_mag <= 5.0)     # aynı
 
             if ok_vy and ok_vh and ok_tilt and ok_spin:
-                bonus = (self.max_steps - self.step_count) * 0.5
+                bonus = (self.max_steps - self.step_count) * 0.6
                 self.termination_reason = "Success"
                 return 2000.0 + bonus, True  # Ödül artırıldı: 1500 → 2000
             else:
@@ -167,24 +167,29 @@ class Env():
         # YUKARI GİTME CEZASI (yukarı kaçmayı önle)
         if vy > 0.0:  # Yukarı gidiyorsa
             # İrtifa arttıkça artan penalty: dy=20m → küçük, dy=40m → büyük
-            up_penalty = 0.25 * vy * (dy / 30.0)  # Artırıldı: 0.15 → 0.20 (dy=40m, vy=2 → ~0.8 ceza)
+            up_penalty = 0.35 * vy * (dy / 30.0)  # Artırıldı: 0.15 → 0.20 (dy=40m, vy=2 → ~0.8 ceza)
             reward -= up_penalty
         
         # DİKEY UZAKLIK (YÜKSEKLİK) CEZASI (yüksekten başlamayı caydır)
         # İrtifa arttıkça artan progressive ceza
-        if dy > 20.0:  # 15m üzeri için ceza
-            height_penalty = -0.1 * (dy - 20.0)  # dy=20m → -0.15, dy=30m → -0.45
+        if dy > 20.0:  # 20m üzeri için ceza
+            height_penalty = -0.2 * (dy - 20.0)  # dy=20m → 0, dy=30m → -2.0
             reward += height_penalty
+        
+        # YÜKSEK İRTİFA EKSTRA CEZASI (ceiling'e yaklaşmayı caydır - reward hacking önleme)
+        if dy > 30.0:
+            high_altitude_penalty = -0.07 * (dy - 30.0)  # dy=30m → 0, dy=50m → -1.0
+            reward += high_altitude_penalty
 
         # merkeze uzaklık cezası (artırıldı: drift sorununu çözmek için)
         # Progressive: mesafe arttıkça ceza artıyor
         if dist_h > 15.0:
-            reward += -0.20 * dist_h  # 10m üzeri: daha agresif ceza (artırıldı: -0.09 → -0.12)
+            reward += -0.3 * dist_h  # 10m üzeri: daha agresif ceza (artırıldı: -0.09 → -0.12)
         else:
-            reward += -0.09 * dist_h  # 10m altı: orta seviye ceza (artırıldı: -0.03 → -0.05)
+            reward += -0.1 * dist_h  # 10m altı: orta seviye ceza (artırıldı: -0.03 → -0.05)
 
         # yatay hız cezası (artırıldı: drift'i azaltmak için)
-        reward += -0.08 * v_h
+        reward += -0.09 * v_h
 
         # VERTICAL VELOCITY: HER İRTİFADA AKTİF (PROGRESSIVE)
         # Yüksek irtifada küçük ceza, düşük irtifada büyük ceza
@@ -201,20 +206,20 @@ class Env():
             reward += 0.08 * (up_y - 0.85)  # Bonus eşit ağırlıkta
 
         # küçük spin cezası
-        reward += -0.03 * w_mag
+        reward += -0.04 * w_mag
         
         # YERE YAKLAŞMA BONUSU (agent'ı inişe teşvik et)
         if dy < 20.0:
-            approach_bonus = 0.09 * np.exp(-dy / 5.0)  # Max ~0.05
+            approach_bonus = 0.15 * np.exp(-dy / 5.0)  # Max ~0.05
             reward += approach_bonus
         
         # MERKEZE YAKLAŞMA BONUSU (exponential - dead code'dan alındı)
-        center_bonus = 0.25 * np.exp(-dist_h / 20.0)  # Max ~0.12, merkeze yaklaştıkça artar (artırıldı: 0.09 → 0.12)
+        center_bonus = 0.35 * np.exp(-dist_h / 20.0)  # Max ~0.12, merkeze yaklaştıkça artar (artırıldı: 0.09 → 0.12)
         reward += center_bonus
         
         # YAVAŞ İNİŞ BONUSU (vy > -2 m/s iken)
         if vy < 0.0 and abs(vy) < 2.5:
-            slow_descent_bonus = 0.05 * (2.5 - abs(vy)) / 2.5  # Max ~0.03
+            slow_descent_bonus = 0.06 * (2.5 - abs(vy)) / 2.5  # Max ~0.03
             reward += slow_descent_bonus
 
         if self.step_count >= self.max_steps:
@@ -255,7 +260,7 @@ class Env():
         # Ödülü 2'ye bölüyoruz (0.1 → 0.5). (+500 -> +250, -500 -> -250)
         # Shaping signal'ların görünür olması için scaling artırıldı.
         # Value Loss patlaması riski düşük (0.5x güvenli aralıkta).
-        reward_step *= 0.40 
+        reward_step *= 0.35 
         # -------------------------------------
 
         self.done = bool(done)
