@@ -1,0 +1,166 @@
+================================================================================
+ROLLOUT_LEN AYARLAMA ANALİZİ: Episode Uzunluğu Değişimi
+================================================================================
+
+SORUN: Medium stage (5-20m/5-30m) geçişi ile episode uzunlukları arttı.
+      Aynı ROLLOUT_LEN (1024 step) ile her update'te daha az episode görüyoruz.
+
+================================================================================
+1. MEVCUT DURUM
+================================================================================
+
+ROLLOUT_LEN = 1024 step (sabit)
+
+================================================================================
+2. EPISODE UZUNLUĞU ANALİZİ
+================================================================================
+
+A) LOW STAGE (5-15m):
+   - Ortalama episode uzunluğu: ~40 step/episode
+   - 1024 step / 40 step/episode = ~25.6 episode per update ✅
+   - Kullanıcının dediği: "25 ep bitiminde up güncellemesi oluyordu"
+
+B) MEDIUM STAGE (5-20m - ŞU AN):
+   - Ortalama episode uzunluğu: ~60 step/episode
+     * Daha yüksek başlangıç = daha uzun iniş süresi
+     * max_steps = 1000 (artırılmış, önceden 800)
+   - 1024 step / 60 step/episode = ~17 episode per update ❌
+   - Episode sayısı: 25 → 17 (-%32 azalma!)
+
+C) MEDIUM STAGE (5-30m - HEDEF):
+   - Ortalama episode uzunluğu: ~80 step/episode
+     * Çok yüksek başlangıç = çok uzun iniş süresi
+   - 1024 step / 80 step/episode = ~12.8 episode per update ❌
+   - Episode sayısı: 25 → 12.8 (-%49 azalma!)
+
+================================================================================
+3. SORUNLAR
+================================================================================
+
+A) DÖNGÜSEL ÖĞRENME AZALMASI:
+   - Her update'te daha az episode = daha az çeşitlilik
+   - Agent farklı başlangıç koşullarını daha az görüyor
+   - Exploration azalıyor
+
+B) UPDATE FREKANSI:
+   - Aynı sayıda episode için daha fazla update gerekiyor
+   - Model daha yavaş öğreniyor
+   - Training efficiency düşüyor
+
+C) BATCH SIZE PROBLEMİ:
+   - PPO batch size'ı aslında step sayısı (1024)
+   - Ama her update'te daha az episode = daha az deneyim
+   - Agent farklı durumları daha az görüyor
+
+================================================================================
+4. ÇÖZÜM: ROLLOUT_LEN AYARLAMA
+================================================================================
+
+HEDEF: Her update'te ~25-30 episode görmek (kullanıcı 30 önerdi)
+
+A) MEDIUM STAGE (5-20m) İÇİN:
+   
+   Ortalama episode uzunluğu: ~60 step/episode
+   Hedef episode sayısı: 30 episode/update
+   
+   Gerekli ROLLOUT_LEN:
+   60 step/episode × 30 episode = 1800 step
+   
+   Öneri: ROLLOUT_LEN = 1536 veya 1800
+   - 1536: ~25.6 episode (low stage'e yakın)
+   - 1800: ~30 episode (kullanıcının önerdiği)
+
+B) MEDIUM STAGE (5-30m) İÇİN:
+   
+   Ortalama episode uzunluğu: ~80 step/episode
+   Hedef episode sayısı: 30 episode/update
+   
+   Gerekli ROLLOUT_LEN:
+   80 step/episode × 30 episode = 2400 step
+   
+   Öneri: ROLLOUT_LEN = 2048 veya 2400
+   - 2048: ~25.6 episode (rounded, güç 2)
+   - 2400: ~30 episode (tam hedef)
+
+C) KADEMELİ AYARLAMA (ÖNERİLEN):
+   
+   1. ŞU AN (5-20m): ROLLOUT_LEN = 1536
+      - ~25-26 episode/update
+      - Low stage'e yakın
+   
+   2. SONRA (5-25m): ROLLOUT_LEN = 1800
+      - ~28-30 episode/update
+   
+   3. EN SON (5-30m): ROLLOUT_LEN = 2048 veya 2400
+      - ~25-30 episode/update
+
+================================================================================
+5. RİSKLER VE DİKKAT EDİLMESİ GEREKENLER
+================================================================================
+
+A) MEMORY KULLANIMI:
+   - ROLLOUT_LEN artınca memory kullanımı artar
+   - 1024 → 2048: 2x memory (yönetilebilir)
+   - Batch size artınca training zamanı da artabilir
+
+B) UPDATE SÜRESİ:
+   - Daha uzun rollout = daha uzun update süresi
+   - Ama daha az update gerekir (aynı episode sayısı için)
+   - Net etki: Training süresi değişmeyebilir
+
+C) LEARNING RATE UYUMLUĞU:
+   - ROLLOUT_LEN değişince learning dynamics değişir
+   - Ama genellikle problem olmaz (PPO robust)
+
+================================================================================
+6. ÖNERİ
+================================================================================
+
+HEDEF: Her update'te ~30 episode görmek (kullanıcı önerisi)
+
+MEVCUT DURUM (5-20m):
+- Ortalama episode uzunluğu: ~60 step/episode
+- Mevcut ROLLOUT_LEN: 1024 → ~17 episode/update
+
+ÖNERİLEN AYARLAMA:
+```python
+# Şu an (5-20m):
+ROLLOUT_LEN = 1536  # ~25-26 episode/update (güvenli başlangıç)
+
+# VEYA direkt olarak:
+ROLLOUT_LEN = 1800  # ~30 episode/update (kullanıcı önerisi)
+
+# Gelecek (5-30m):
+ROLLOUT_LEN = 2048  # ~25-26 episode/update (rounded, güç 2)
+# VEYA
+ROLLOUT_LEN = 2400  # ~30 episode/update (tam hedef)
+```
+
+KULLANICI ÖNERİSİ: 30 episode/update
+- Medium stage (5-20m): ROLLOUT_LEN = 1800 ✅
+- Future stage (5-30m): ROLLOUT_LEN = 2400 ✅
+
+================================================================================
+7. UYGULAMA
+================================================================================
+
+train_main.py'de:
+```python
+# ÖNCE (Low stage):
+ROLLOUT_LEN = 1024  # ~25 episode/update (5-15m)
+
+# ŞİMDİ (Medium stage 5-20m):
+ROLLOUT_LEN = 1800  # ~30 episode/update
+
+# GELECEK (Medium stage 5-30m):
+ROLLOUT_LEN = 2400  # ~30 episode/update
+```
+
+GEREKÇE:
+1. ✅ Her update'te yeterli episode çeşitliliği
+2. ✅ Exploration korunur
+3. ✅ Training efficiency iyileşir
+4. ✅ Kullanıcı önerisine uygun (30 episode/update)
+
+================================================================================
+

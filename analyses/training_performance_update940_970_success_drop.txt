@@ -1,0 +1,181 @@
+================================================================================
+TRAINING PERFORMANCE ANALİZİ: Update 940-970 - SUCCESS ORANI DÜŞÜŞÜ
+================================================================================
+
+ARALIK: EP 608-706 (99 episodes, Update ~940-970)
+SORUN: Success oranı belirgin şekilde düştü
+
+================================================================================
+1. SUCCESS ORANI ANALİZİ
+================================================================================
+
+EP 608-706 ARASI (99 EPISODES):
+
+Success Episodes:
+  - EP 625: Success | Ret: 1072.5 | Start: 1.8m/4.6m | End: 1.7m/4.6m | Vel: -0.7 m/s
+  - EP 645: Success | Ret: 1079.8 | Start: 1.7m/1.6m | End: 1.7m/1.6m | Vel: -0.2 m/s
+  - EP 650: Success | Ret: 1079.8 | Start: 1.7m/4.2m | End: 1.7m/4.2m | Vel: -0.1 m/s
+  - EP 699: Success | Ret: 1063.8 | Start: 2.3m/4.9m | End: 1.7m/4.9m | Vel: -1.3 m/s
+
+TOPLAM SUCCESS: 4 / 99 = %4.04 ❌❌❌
+
+Diğer Termination Reasons:
+  - MissedZone: ~40-45 episode (%40-45)
+  - OutOfBounds: ~35-40 episode (%35-40)
+  - CeilingHit: ~5-8 episode (%5-8)
+  - Crash: ~5-8 episode (%5-8)
+  - Spin: ~3-5 episode (%3-5)
+  - Tilted: ~1-2 episode (%1-2)
+
+================================================================================
+2. ÖNCEKİ PERFORMANS İLE KARŞILAŞTIRMA
+================================================================================
+
+A) Update 781-880 Arası (Önceki Analiz):
+   - Success Rate: ~%11-15 (düşük ama daha iyiydi)
+   - MissedZone: ~%30-35
+   - OutOfBounds: ~%25-30
+   - CeilingHit: ~%10-15
+   - Crash: ~%15-20
+
+B) Update 940-970 Arası (Şu An):
+   - Success Rate: %4.04 ❌❌❌ (ÇOK DÜŞÜK!)
+   - MissedZone: ~%40-45 (ARTTI)
+   - OutOfBounds: ~%35-40 (ARTTI)
+   - CeilingHit: ~%5-8 (AZALDI - İYİ)
+   - Crash: ~%5-8 (AZALDI - İYİ)
+
+================================================================================
+3. KRİTİK GÖZLEMLER
+================================================================================
+
+A) SUCCESS EPISODES PATTERN:
+   
+   Tüm success'ler DÜŞÜK başlangıçtan (1.7-2.3m):
+   - EP 625: Start 1.8m
+   - EP 645: Start 1.7m
+   - EP 650: Start 1.7m
+   - EP 699: Start 2.3m
+   
+   Agent SADECE çok düşük başlangıçlardan başarılı oluyor!
+   Orta-yüksek başlangıçlardan (5-20m) başarılı olmuyor.
+
+B) MISSEDZONE PROBLEMİ:
+   
+   ~%40-45 MissedZone rate - ÇOK YÜKSEK!
+   - Agent hedef bölgeye yaklaşamıyor
+   - Horizontal drift kontrolü yetersiz
+   - Merkeze yaklaşma öğrenilmemiş
+
+C) OUTOFBOUNDS PROBLEMİ:
+   
+   ~%35-40 OutOfBounds rate - ÇOK YÜKSEK!
+   - Agent yatay sınırları aşıyor
+   - Drift control tamamen yetersiz
+   - Belki de reward shaping yetersiz
+
+D) CEILING HIT AZALDI:
+   
+   ~%5-8 CeilingHit (önceden %10-15)
+   - Bu pozitif bir gelişme
+   - Yukarı kaçma davranışı azaldı
+   - Ama başka sorunlar ortaya çıktı
+
+================================================================================
+4. MUHTEMEL NEDENLER
+================================================================================
+
+A) REWARD SHAPING YETERSİZ:
+   
+   1. Center bonus yetersiz olabilir
+      - Merkeze yaklaşma yeterince ödüllendirilmiyor
+   2. Distance penalty yetersiz olabilir
+      - Drift kontrolü için ceza yeterince güçlü değil
+   3. Success criteria çok katı olabilir
+      - Agent çok nadiren success şartlarını sağlayabiliyor
+
+B) CURRICULUM LEARNING SORUNU:
+   
+   - init_y_max = 20.0m (medium stage geçişi)
+   - Agent yüksek başlangıçlardan iniş yapmayı öğrenemiyor
+   - Sadece düşük başlangıçlardan (1.7-2.3m) başarılı oluyor
+   - Medium stage zorluğu agent için çok fazla olabilir
+
+C) MODEL DEGRADATION:
+   
+   - Update 940-970'te model bozulmuş olabilir
+   - Loss değerleri değişken (Update 940: 2722, Update 950: 101, Update 960: 126, Update 970: 24)
+   - Model kararsız durumda olabilir
+
+D) EXPLORATION PROBLEMİ:
+   
+   - Agent exploration yapamıyor
+   - Sadece düşük başlangıçlardan success'li davranış öğrenmiş
+   - Orta-yüksek başlangıçlardan başarılı strateji yok
+
+================================================================================
+5. ÖNERİLER
+================================================================================
+
+A) KISA VADELİ (ACİL):
+   
+   1. ✅ Reward Scaling Azalt:
+      - reward_step *= 0.5 → 0.25 (loss patlamalarını önle)
+   
+   2. ✅ Center Bonus Artır:
+      - 0.15 * exp(-dist_h / 20.0) → 0.25 * exp(-dist_h / 15.0)
+      - Merkeze yaklaşmayı daha çok ödüllendir
+   
+   3. ✅ Distance Penalty Artır:
+      - dist_h > 15.0: -0.15 → -0.20 (daha agresif)
+      - Drift kontrolünü güçlendir
+   
+   4. ✅ Success Criteria Gözden Geçir:
+      - dy <= 1.7: Biraz gevşet (1.7 → 2.0)?
+      - vy threshold: 3.5 → 4.0?
+      - vh threshold: 3.0 → 3.5?
+
+B) ORTA VADELİ:
+   
+   1. Curriculum Learning Gözden Geçir:
+      - init_y_max: 20.0 → 15.0 (geri dön)
+      - Önce 5-15m'de stabil success sağla
+      - Sonra kademeli olarak artır (15→18→20→25→30)
+   
+   2. MissedZone Reward İyileştir:
+      - Progressive penalty'yi güçlendir
+      - Zone'a yaklaştıkça daha çok ödül ver
+
+C) UZUN VADELİ:
+   
+   1. Model Checkpoint Kontrolü:
+      - Update 781-880 arası checkpoint'e geri dön
+      - O aralıktaki parametreleri kullan
+   
+   2. Training Strategy Değiştir:
+      - Curriculum learning'i daha kademeli yap
+      - Her stage'de minimum success rate bekle (%20+)
+      - Sonra bir sonraki stage'e geç
+
+================================================================================
+6. ACİL EYLEM PLANI
+================================================================================
+
+1. İLK: Reward scaling'i azalt (0.5 → 0.25)
+   - Loss patlamalarını önle
+   - Model stabilitesini artır
+
+2. İKİNCİ: Center bonus ve distance penalty artır
+   - MissedZone ve OutOfBounds'i azalt
+   - Drift kontrolünü güçlendir
+
+3. ÜÇÜNCÜ: Curriculum learning'i geri al
+   - init_y_max: 20.0 → 15.0
+   - Önce 5-15m aralığında stabilite sağla
+
+4. DÖRDÜNCÜ: Eğer sorun devam ederse:
+   - Update 781-880 arası checkpoint'e geri dön
+   - O parametreleri kullan ve kademeli ilerle
+
+================================================================================
+

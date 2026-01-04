@@ -18,20 +18,20 @@ class Env():
         self.con = connector.Connector(ip,port)
         self.done = False
         self.termination_reason = "TimeLimit"
-        self.max_steps = 800
+        self.max_steps = 1000
         self.step_count = 0
         
         # Başlangıç değerleri - kolayca değiştirilebilir
         self.init_y_min = 5.0
-        self.init_y_max = 15.0
-        self.init_z_min = -5.0
-        self.init_z_max = 5.0
+        self.init_y_max = 20.0
+        self.init_z_min = -5.5
+        self.init_z_max = 5.5
         self.init_x_min = -5.0
         self.init_x_max = 5.0
-        self.init_pitch_min = -2.0
-        self.init_pitch_max = 2.0
-        self.init_yaw_min = -2.0
-        self.init_yaw_max = 2.0
+        self.init_pitch_min = -2.5
+        self.init_pitch_max = 2.5
+        self.init_yaw_min = -2.5
+        self.init_yaw_max = 2.5
         
         # State normalizasyon ölçekleri (log-compress için)
         # Konuşma bazlı: state_normalization_discussion.txt
@@ -117,7 +117,7 @@ class Env():
 
         # --- TERMINAL ---
         # Ceiling: Daha erken yakala ve çok sert cezalandır (yukarı kaçmayı önle)
-        if dy >= 50.0 and vy > 0.3:  # Threshold düşürüldü: 75→50, 0.5→0.3
+        if dy >= 60.0 and vy > 0.3:  # Threshold düşürüldü: 75→50, 0.5→0.3
             self.termination_reason = "CeilingHit"
             return -1000.0, True  # Penalty 2x artırıldı: -500 → -1000
 
@@ -130,31 +130,31 @@ class Env():
             self.termination_reason = "Tilted"
             return -500.0, True
 
-        if w_mag > 10.0:
+        if w_mag > 8.0:
             self.termination_reason = "Spin"
-            return -500.0, True
+            return -510.0, True
 
         # --- LANDING CHECK ---
         if dy <= 1.7:
             # zone: kare yerine daire daha stabil
-            in_zone = (dist_h < 8.0)  # daha da gevşetildi: 4.5 → 6.0 (normal inişleri başarı say)
+            in_zone = (dist_h < 8.5)  # daha da gevşetildi: 4.5 → 6.0 (normal inişleri başarı say)
 
             if not in_zone:
                 self.termination_reason = "MissedZone"
                 # PROGRESSIVE MISSEDZONE REWARD: Zone'a yakınlığa göre ceza
                 # dist_h = 6.5m → -150 (hafif), dist_h = 10m → -250 (orta), dist_h = 15m → -350 (sert)
                 base_penalty = -150.0  # Zone sınırında (6.5m)
-                distance_penalty = -20.0 * max(0.0, dist_h - 8.0)  # Her 1m uzaklık için -20
+                distance_penalty = -25.0 * max(0.0, dist_h - 8.5)  # Her 1m uzaklık için -20
                 missed_zone_reward = max(-350.0, base_penalty + distance_penalty)  # Max -350 cap
                 return missed_zone_reward, True
 
             ok_vy   = (abs(vy) <= 3.5)   # sıkılaştırıldı: 4.5 → 2.5 (daha yumuşak iniş)
             ok_vh   = (v_h <= 3.0)       # sıkılaştırıldı: 3.0 → 2.0 (daha kontrollü)
             ok_tilt = (up_y >= 0.85)     # aynı
-            ok_spin = (w_mag <= 4.5)     # aynı
+            ok_spin = (w_mag <= 5.0)     # aynı
 
             if ok_vy and ok_vh and ok_tilt and ok_spin:
-                bonus = (self.max_steps - self.step_count) * 0.3
+                bonus = (self.max_steps - self.step_count) * 0.5
                 self.termination_reason = "Success"
                 return 2000.0 + bonus, True  # Ödül artırıldı: 1500 → 2000
             else:
@@ -167,29 +167,30 @@ class Env():
         # YUKARI GİTME CEZASI (yukarı kaçmayı önle)
         if vy > 0.0:  # Yukarı gidiyorsa
             # İrtifa arttıkça artan penalty: dy=20m → küçük, dy=40m → büyük
-            up_penalty = 0.20 * vy * (dy / 20.0)  # Artırıldı: 0.15 → 0.20 (dy=40m, vy=2 → ~0.8 ceza)
+            up_penalty = 0.25 * vy * (dy / 30.0)  # Artırıldı: 0.15 → 0.20 (dy=40m, vy=2 → ~0.8 ceza)
             reward -= up_penalty
         
         # DİKEY UZAKLIK (YÜKSEKLİK) CEZASI (yüksekten başlamayı caydır)
         # İrtifa arttıkça artan progressive ceza
-        if dy > 15.0:  # 15m üzeri için ceza
-            height_penalty = -0.03 * (dy - 15.0)  # dy=20m → -0.15, dy=30m → -0.45
+        if dy > 20.0:  # 15m üzeri için ceza
+            height_penalty = -0.1 * (dy - 20.0)  # dy=20m → -0.15, dy=30m → -0.45
             reward += height_penalty
 
         # merkeze uzaklık cezası (artırıldı: drift sorununu çözmek için)
         # Progressive: mesafe arttıkça ceza artıyor
-        if dist_h > 10.0:
-            reward += -0.12 * dist_h  # 10m üzeri: daha agresif ceza (artırıldı: -0.09 → -0.12)
+        if dist_h > 15.0:
+            reward += -0.20 * dist_h  # 10m üzeri: daha agresif ceza (artırıldı: -0.09 → -0.12)
         else:
-            reward += -0.05 * dist_h  # 10m altı: orta seviye ceza (artırıldı: -0.03 → -0.05)
+            reward += -0.09 * dist_h  # 10m altı: orta seviye ceza (artırıldı: -0.03 → -0.05)
 
         # yatay hız cezası (artırıldı: drift'i azaltmak için)
-        reward += -0.07 * v_h
+        reward += -0.08 * v_h
 
         # VERTICAL VELOCITY: HER İRTİFADA AKTİF (PROGRESSIVE)
         # Yüksek irtifada küçük ceza, düşük irtifada büyük ceza
+        # NOT: Strateji tartışılabilir - yüksek irtifada erken kontrol için daha büyük ceza da mantıklı olabilir
         if vy < 0.0:  # Aşağı düşüyorsa
-            # İrtifa azaldıkça artan penalty: dy=20m → ~0.5x, dy=5m → ~1.5x, dy=1.5m → ~2.0x
+            # İrtifa azaldıkça artan penalty: dy=30m → ~1.48x, dy=20m → ~1.71x, dy=10m → ~2.36x, dy=5m → ~3.5x, dy=1.5m → ~7.0x
             altitude_factor = 1.0 + (15.0 / (dy + 1.0))
             reward -= 0.08 * abs(vy) * altitude_factor
 
@@ -200,15 +201,15 @@ class Env():
             reward += 0.08 * (up_y - 0.85)  # Bonus eşit ağırlıkta
 
         # küçük spin cezası
-        reward += -0.01 * w_mag
+        reward += -0.03 * w_mag
         
         # YERE YAKLAŞMA BONUSU (agent'ı inişe teşvik et)
         if dy < 20.0:
-            approach_bonus = 0.08 * np.exp(-dy / 5.0)  # Max ~0.05
+            approach_bonus = 0.09 * np.exp(-dy / 5.0)  # Max ~0.05
             reward += approach_bonus
         
         # MERKEZE YAKLAŞMA BONUSU (exponential - dead code'dan alındı)
-        center_bonus = 0.12 * np.exp(-dist_h / 10.0)  # Max ~0.12, merkeze yaklaştıkça artar (artırıldı: 0.09 → 0.12)
+        center_bonus = 0.25 * np.exp(-dist_h / 20.0)  # Max ~0.12, merkeze yaklaştıkça artar (artırıldı: 0.09 → 0.12)
         reward += center_bonus
         
         # YAVAŞ İNİŞ BONUSU (vy > -2 m/s iken)
@@ -254,7 +255,7 @@ class Env():
         # Ödülü 2'ye bölüyoruz (0.1 → 0.5). (+500 -> +250, -500 -> -250)
         # Shaping signal'ların görünür olması için scaling artırıldı.
         # Value Loss patlaması riski düşük (0.5x güvenli aralıkta).
-        reward_step *= 0.5 
+        reward_step *= 0.40 
         # -------------------------------------
 
         self.done = bool(done)

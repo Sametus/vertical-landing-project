@@ -73,7 +73,7 @@ if __name__ == "__main__":
     enviroment = Env()
     ajan = PPOAgent()
 
-    ROLLOUT_LEN = 1024
+    ROLLOUT_LEN = 1800
     TOTAL_UPDATES = 10000 # Uzun soluklu eğitim için artırdım
     SAVE_EVERY_UPDATES = 20
 
