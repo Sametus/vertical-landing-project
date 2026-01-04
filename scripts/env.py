@@ -121,9 +121,9 @@ class Env():
             self.termination_reason = "CeilingHit"
             return -1000.0, True  # Penalty 2x artırıldı: -500 → -1000
 
-        if abs(dx) >= 30.0 or abs(dz) >= 30.0:  # Sınır genişletildi: 25m → 30m
+        if abs(dx) >= 35.0 or abs(dz) >= 35.0:  # Sınır genişletildi: 25m → 30m
             self.termination_reason = "OutOfBounds"
-            return -600.0, True  # Cezası artırıldı: -500 → -600
+            return -650.0, True  # Cezası artırıldı: -500 → -600
 
         # Tilt: low'da çok devrildiyse bitir
         if up_y < 0.35:
@@ -143,13 +143,13 @@ class Env():
                 self.termination_reason = "MissedZone"
                 return -300.0, True  # ceza hafifletildi: -350 → -300 (çok sert değil)
 
-            ok_vy   = (abs(vy) <= 2.5)   # sıkılaştırıldı: 4.5 → 2.5 (daha yumuşak iniş)
-            ok_vh   = (v_h <= 2.0)       # sıkılaştırıldı: 3.0 → 2.0 (daha kontrollü)
+            ok_vy   = (abs(vy) <= 3.0)   # sıkılaştırıldı: 4.5 → 2.5 (daha yumuşak iniş)
+            ok_vh   = (v_h <= 2.5)       # sıkılaştırıldı: 3.0 → 2.0 (daha kontrollü)
             ok_tilt = (up_y >= 0.85)     # aynı
-            ok_spin = (w_mag <= 4.0)     # aynı
+            ok_spin = (w_mag <= 4.5)     # aynı
 
             if ok_vy and ok_vh and ok_tilt and ok_spin:
-                bonus = (self.max_steps - self.step_count) * 0.1
+                bonus = (self.max_steps - self.step_count) * 0.2
                 self.termination_reason = "Success"
                 return 2000.0 + bonus, True  # Ödül artırıldı: 1500 → 2000
             else:
@@ -202,6 +202,10 @@ class Env():
             approach_bonus = 0.05 * np.exp(-dy / 5.0)  # Max ~0.05
             reward += approach_bonus
         
+        # MERKEZE YAKLAŞMA BONUSU (exponential - dead code'dan alındı)
+        center_bonus = 0.03 * np.exp(-dist_h / 10.0)  # Max ~0.03, merkeze yaklaştıkça artar
+        reward += center_bonus
+        
         # YAVAŞ İNİŞ BONUSU (vy > -2 m/s iken)
         if vy < 0.0 and abs(vy) < 2.0:
             slow_descent_bonus = 0.03 * (2.0 - abs(vy)) / 2.0  # Max ~0.03
@@ -212,58 +216,6 @@ class Env():
             return reward - 60.0, True
 
         return reward, False
-
-
-        # --- 3. ADIM BAŞI ÖDÜL/CEZA (SHAPING) ---
-        # Buraya geldiyse havada demektir (dy > 1.0) ve oyun bitmemiştir.
-
-        # Temel Yaşam Maliyeti (Az olsun ki hemen intihar etmesin)
-        step_penalty = -0.02 
-
-        # Merkeze Uzaklık Cezası (Sürekli merkeze çekmek için)
-        dist_horizontal = np.sqrt(dx**2 + dz**2)
-        dist_penalty = dist_horizontal * 0.05
-        
-        # Shaping (Doğru yoldaysa ufak ödüller)
-        shaping_pos = 0.0
-        shaping_pos += 0.05 * np.exp(-1.0 * abs(dy) / 30.0)      # Yere yaklaştıkça artar
-        shaping_pos += 0.05 * np.exp(-1.0 * dist_horizontal / 10.0) # Merkeze yaklaştıkça artar
-        
-        # Stabilite Bonusu (Dik durduğu için aferin)
-        shaping_stab = 0.04 * up_vector_y if up_vector_y > 0.5 else 0.0
-
-        # Dikey Hız Cezası (Sadece yere yakınken çok hızlıysa devreye girer)
-        velocity_penalty = 0.0
-        if vy < 0 and dy < 15.0: 
-            # Yere yaklaştıkça hızlanmak daha pahalı olur
-            velocity_penalty = abs(vy) * (1.0 / (dy + 1.0)) * 0.05
-
-        # Yatay Hız Cezası (GÜNCELLENDİ: 0.1 -> 0.03)
-        # Rahat manevra yapsın diye gevşettik.
-        horizontal_speed = np.sqrt(vx**2 + vz**2)
-        horizontal_penalty = horizontal_speed * 0.03 
-        
-        # Toplam Adım Ödülü Hesaplama
-        current_step_reward = (
-            step_penalty 
-            - dist_penalty 
-            + shaping_pos 
-            + shaping_stab 
-            - velocity_penalty 
-            - horizontal_penalty 
-            - (0.01 * abs_roll)
-        )
-        
-        reward += current_step_reward
-
-        # Zaman sınırı kontrolü
-        if self.step_count >= self.max_steps:
-            self.termination_reason = "TimeLimit"
-            reward += -60.0  # Zaman doldu cezası
-            done = True
-            return reward, done
-
-        return reward, done
     
     
     def step(self, action):
