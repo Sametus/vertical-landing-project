@@ -332,29 +332,9 @@ Projeyi geliştirmek için yapılabilecekler:
 
 ## Log Analizi ve Görselleştirme
 
-Eğitim sırasında oluşturulan log dosyalarından detaylı analizler yapmak ve grafikler oluşturmak için Python scripti (matplotlib/seaborn) kullanılabilir.
+Eğitim sırasında oluşturulan log dosyalarından detaylı analizler yapmak ve grafikler oluşturmak için `analyze_training.py` scripti kullanılır. Script **matplotlib** ve **seaborn** kütüphanelerini kullanarak profesyonel grafikler oluşturur.
 
-### Analiz Scriptini Çalıştırma
-
-**1. Python environment'ını aktif edin** (rl_codes veya DL_YOLO):
-```bash
-conda activate rl_codes
-# veya
-conda activate DL_YOLO
-```
-
-**2. Gerekli kütüphaneleri yükleyin** (eğer yoksa):
-```bash
-pip install matplotlib seaborn pandas numpy
-```
-
-**3. Scripti çalıştırın**:
-```bash
-cd scripts
-python analyze_training.py
-```
-
-Script şu grafikleri otomatik olarak oluşturur ve PNG formatında kaydeder:
+Script şu grafikleri otomatik olarak oluşturur ve PNG formatında `images/` klasörüne kaydeder:
 
 #### 1. Success Rate Trendi
 Update'lere göre başarı oranının nasıl değiştiğini gösterir (10-update moving average ile).
@@ -386,10 +366,7 @@ Başarılı ve başarısız episode'ların return değerlerinin histogram karş�
 
 ![Return Dağılımı](images/return_distribution.png)
 
-**Çıktı**: 
-- Tüm grafikler PNG formatında `images/` klasörüne kaydedilir
-- Script çalıştırıldıktan sonra özet istatistikler konsola yazdırılır
-- Grafikler README.md'ye otomatik olarak eklenebilir
+**Kullanılan Kütüphaneler**: matplotlib, seaborn, pandas, numpy
 
 ### Örnek Analiz Soruları
 
@@ -403,7 +380,7 @@ Bu grafiklerle şu sorulara cevap bulabilirsiniz:
 
 ### Özelleştirme
 
-MATLAB scriptini düzenleyerek kendi analizlerinizi de ekleyebilirsiniz:
+Python scriptini düzenleyerek kendi analizlerinizi de ekleyebilirsiniz:
 - Belirli update aralıklarına odaklanma (Update değişkenini filtreleyin)
 - Farklı grafik türleri (box plot, violin plot, vb.)
 - Başlangıç mesafesi vs başarı analizi (StartDist kullanın)
