@@ -330,13 +330,81 @@ Projeyi geliştirmek için yapılabilecekler:
 - Çoklu roket senaryoları
 - Görsel girdi kullanımı (kamera görüntüsü ile CNN)
 
+## Log Analizi ve Görselleştirme
+
+Eğitim sırasında oluşturulan log dosyalarından detaylı analizler yapmak ve grafikler oluşturmak için MATLAB scripti kullanılabilir.
+
+### Analiz Scriptini Çalıştırma
+
+**MATLAB'de scripti çalıştırın**:
+```matlab
+cd scripts
+analyze_training
+```
+
+Script şu grafikleri otomatik olarak oluşturur ve PNG formatında kaydeder:
+
+#### 1. Success Rate Trendi
+Update'lere göre başarı oranının nasıl değiştiğini gösterir (10-update moving average ile).
+
+![Success Rate Trendi](images/success_rate_trend.png)
+
+#### 2. Başlangıç İrtifası vs Success
+Hangi irtifa aralıklarından daha başarılı inişler yapıldığını gösterir. Her bar üzerinde success oranı ve episode sayısı gösterilir.
+
+![Başlangıç İrtifası vs Success](images/start_altitude_vs_success.png)
+
+#### 3. Başlangıç İrtifası Scatter Plot
+Episode'lara göre başarılı (yeşil) ve başarısız (kırmızı) inişlerin başlangıç irtifası dağılımı. Zaman içindeki değişimi gösterir.
+
+![Başlangıç İrtifası Scatter](images/start_altitude_scatter.png)
+
+#### 4. Termination Reason Dağılımı
+Hangi sebeplerle episode'ların bittiğini gösteren pasta grafiği. En yaygın 8 sebep gösterilir.
+
+![Termination Reasons](images/termination_reasons.png)
+
+#### 5. Loss Trendi
+Policy loss ve value loss'un eğitim boyunca değişimi (update_logs.csv varsa).
+
+![Loss Trendi](images/loss_trend.png)
+
+#### 6. Return Dağılımı
+Başarılı ve başarısız episode'ların return değerlerinin histogram karşılaştırması.
+
+![Return Dağılımı](images/return_distribution.png)
+
+**Çıktı**: 
+- Tüm grafikler PNG formatında `images/` klasörüne kaydedilir
+- Script çalıştırıldıktan sonra özet istatistikler konsola yazdırılır
+- Grafikler README.md'ye otomatik olarak eklenebilir
+
+### Örnek Analiz Soruları
+
+Bu grafiklerle şu sorulara cevap bulabilirsiniz:
+
+- **Başarı oranı zamanla artıyor mu?** → Success Rate Trend grafiğine bakın (moving average eğilimini gösterir)
+- **Hangi başlangıç irtifalarından iniş daha zor?** → Başlangıç İrtifası vs Success grafiğine bakın (düşük bar = zor irtifa)
+- **Model hangi hataları daha sık yapıyor?** → Termination Reason dağılımına bakın (en büyük dilim = en yaygın hata)
+- **Eğitim stabil mi, yoksa loss çok mu değişken?** → Loss Trend grafiğine bakın (düzgün düşüş = iyi)
+- **Yüksek başlangıç irtifalarından başarılı inişler yapılıyor mu?** → Scatter plot'a bakın (yeşil noktalar yüksekte mi?)
+
+### Özelleştirme
+
+MATLAB scriptini düzenleyerek kendi analizlerinizi de ekleyebilirsiniz:
+- Belirli update aralıklarına odaklanma (Update değişkenini filtreleyin)
+- Farklı grafik türleri (box plot, violin plot, vb.)
+- Başlangıç mesafesi vs başarı analizi (StartDist kullanın)
+- Update başına episode sayısı analizi
+
 ## İpuçları ve Öneriler
 
 - **İlk başlangıç**: Önce `play_test.py` ile eğitilmiş bir modeli test ederek Unity bağlantısının çalıştığını kontrol edin
 - **Eğitim sırasında**: Unity Editor'de roketin davranışını izleyebilirsiniz
-- **Log analizi**: `analyses/` klasöründeki dosyalar training sürecini anlamak için faydalı
+- **Log analizi**: `analyze_training.py` scriptini kullanarak training sürecini görsel olarak analiz edin
 - **Model yedekleme**: Önemli checkpoint'leri mutlaka yedekleyin
 - **GPU kullanımı**: CUDA kurulu değilse CPU ile de çalışır, ancak çok daha yavaş olacaktır
+- **Grafik analizi**: Eğitim sonrası mutlaka grafikleri inceleyin - hangi aşamada sorunlar olduğunu görebilirsiniz
 
 ## Lisans
 
