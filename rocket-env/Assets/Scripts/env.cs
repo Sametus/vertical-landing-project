@@ -15,8 +15,10 @@ namespace Assets.Scripts
     public class env: MonoBehaviour
     {
 
+        [Header("Physics & Components")]
         public Rigidbody rocketRb;
         public Transform targetPoint;
+        public Transform bottomSensor; // YENI: Sanal nokta - roketin ayak ucu hizasındaki sensör
 
         [Header("Effects")]
         public ParticleSystem mainEngineParticles;
@@ -24,7 +26,8 @@ namespace Assets.Scripts
         public float mainThrustPower = 20000f;  // Düşey itki gücü artırıldı (10000 → 15000)
         public float rcsPower = 1200f;
 
-        private Vector3 feetOffset = new Vector3(0, -2.0f, 0);
+        // feetOffset artık kullanılmıyor - bottomSensor kullanılıyor
+        // private Vector3 feetOffset = new Vector3(0, -2.0f, 0);
 
         void Start()
         {
@@ -32,12 +35,10 @@ namespace Assets.Scripts
             // Roket tamamen serbest olsun, dengesini yapay zeka sağlasın.
             rocketRb.constraints = RigidbodyConstraints.None; 
 
-            // Otomatik Ayak Mesafesi Hesaplama (Önceki konuşmamızdan)
-            Collider col = GetComponent<Collider>();
-            if (col != null)
+            // BottomSensor kontrolü - Unity Editor'da atanmış olmalı
+            if (bottomSensor == null)
             {
-                float halfHeight = col.bounds.extents.y / transform.localScale.y;
-                feetOffset = new Vector3(0, -halfHeight, 0);
+                Debug.LogWarning("BottomSensor atanmamış! Roket pivot pozisyonu kullanılacak.");
             }
         }
 
@@ -161,82 +162,30 @@ namespace Assets.Scripts
             }
         }
 
-        // Ayakların en alt noktasını bulur (açılı ayaklar için)
-        private Vector3 FindLowestLegPoint()
-        {
-            Vector3 lowestPoint = transform.TransformPoint(feetOffset); // Gövdenin alt ucu başlangıç
-            
-            // Tüm child objeleri kontrol et (ayakları bul)
-            foreach (Transform child in transform)
-            {
-                // Leg veya Leg_Pivot ile başlayan objeleri bul
-                if (child.name.Contains("Leg") && !child.name.Contains("Pivot"))
-                {
-                    Collider legCol = child.GetComponent<Collider>();
-                    if (legCol != null)
-                    {
-                        // Collider'ın en alt noktasını al (bounds.min.y)
-                        Vector3 legBottom = legCol.bounds.min;
-                        if (legBottom.y < lowestPoint.y)
-                        {
-                            lowestPoint = legBottom;
-                        }
-                    }
-                    else
-                    {
-                        // Collider yoksa, transform pozisyonunu kullan
-                        // Ama açılı olduğu için yaklaşık hesaplama yapalım
-                        Vector3 legPos = child.position;
-                        // Ayak uzunluğu yaklaşık olarak scale.y ile verilmiş olabilir
-                        float legLength = child.localScale.y;
-                        // 30 derece açıyla en alt nokta: sin(30) * legLength = 0.5 * legLength
-                        float bottomOffset = legLength * 0.5f;
-                        Vector3 legBottom = legPos - Vector3.up * bottomOffset;
-                        if (legBottom.y < lowestPoint.y)
-                        {
-                            lowestPoint = legBottom;
-                        }
-                    }
-                }
-            }
-            
-            return lowestPoint;
-        }
-
         // connector.cs ilet
         public string getStates()
         {
-            if (targetPoint == null || rocketRb == null) return "";
+            if (rocketRb == null) return "0,0,0,0,0,0,0,0,0,0,0,0,0";
             
-            // Açılı ayaklar için gerçek en alt noktayı bul
-            Vector3 globalFeetPos = FindLowestLegPoint();
+            // YENI MANTIK: feetOffset yerine bottomSensor'ın dünya koordinatını alıyoruz
+            // Eğer sensor atanmadıysa roketin kendi pozisyonunu kullanır.
+            Vector3 currentBottomPos = (bottomSensor != null) ? bottomSensor.position : transform.position;
+            
+            Vector3 targetPos = (targetPoint != null) ? targetPoint.position : Vector3.zero;
 
-            float dx = targetPoint.position.x - globalFeetPos.x;
-            float dz = targetPoint.position.z - globalFeetPos.z;
-            float dy = globalFeetPos.y - targetPoint.position.y;
-            Vector3 velocity = rocketRb.linearVelocity;
-            Vector3 angularVel = rocketRb.angularVelocity;
-
-            Quaternion rotation = transform.rotation;
+            // Hedefe olan uzaklığı artık bu sanal noktadan hesaplıyoruz
+            float dx = targetPos.x - currentBottomPos.x;
+            float dy = currentBottomPos.y - targetPos.y; // Gerçek yerden yükseklik
+            float dz = targetPos.z - currentBottomPos.z;
+            Vector3 vel = rocketRb.linearVelocity; // Unity 6 standardı
+            Vector3 angVel = rocketRb.angularVelocity;
+            Quaternion rot = transform.rotation;
 
             // Python beklenen sıra: dx, dy, dz, vx, vy, vz, wx, wy, wz, qx, qy, qz, qw
             // InvariantCulture kullanarak ondalık ayırıcıyı nokta (.) yapıyoruz
-            string states =
-                dx.ToString(CultureInfo.InvariantCulture) + "," +
-                dy.ToString(CultureInfo.InvariantCulture) + "," +
-                dz.ToString(CultureInfo.InvariantCulture) + "," +
-                velocity.x.ToString(CultureInfo.InvariantCulture) + "," +
-                velocity.y.ToString(CultureInfo.InvariantCulture) + "," +
-                velocity.z.ToString(CultureInfo.InvariantCulture) + "," +
-                angularVel.x.ToString(CultureInfo.InvariantCulture) + "," +
-                angularVel.y.ToString(CultureInfo.InvariantCulture) + "," +
-                angularVel.z.ToString(CultureInfo.InvariantCulture) + "," +
-                rotation.x.ToString(CultureInfo.InvariantCulture) + "," +
-                rotation.y.ToString(CultureInfo.InvariantCulture) + "," +
-                rotation.z.ToString(CultureInfo.InvariantCulture) + "," +
-                rotation.w.ToString(CultureInfo.InvariantCulture);
-
-            return  states;
+            return string.Format(CultureInfo.InvariantCulture,
+                "{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12}",
+                dx, dy, dz, vel.x, vel.y, vel.z, angVel.x, angVel.y, angVel.z, rot.x, rot.y, rot.z, rot.w);
         }
     }
 }

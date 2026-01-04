@@ -230,23 +230,9 @@ def main():
                 state_raw = as_float32(next_state_raw)
                 state_norm = as_float32(environment.normalize_state(state_raw))
             
-            # Episode sonu
+            # Episode sonu - son state zaten elimizde (next_state_raw'dan gelen)
             reason = getattr(environment, 'termination_reason', 'Unknown')
-            
-            # Success durumunda Unity'den son state'i oku (roket yere temas etmiş olabilir)
-            if reason == "Success":
-                # Unity'den güncel state'i oku (reset yapmadan önce)
-                # Zero action göndererek fizik motorunu bir frame ilerletmeye gerek yok,
-                # sadece mevcut state'i okuyalım
-                try:
-                    # readStates() Unity'den mevcut state'i okur (action göndermeden)
-                    current_state_raw = as_float32(environment.readStates())
-                    final_info = format_state(current_state_raw)
-                except:
-                    # Hata olursa eski state'i kullan
-                    final_info = format_state(state_raw)
-            else:
-                final_info = format_state(state_raw)
+            final_info = format_state(state_raw)  # Son state'i kullan (step()'den gelen)
             
             print(f"\n{'='*80}")
             print(f"EPISODE {episode} BİTTİ")
