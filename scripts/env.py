@@ -18,20 +18,20 @@ class Env():
         self.con = connector.Connector(ip,port)
         self.done = False
         self.termination_reason = "TimeLimit"
-        self.max_steps = 1000
+        self.max_steps = 775
         self.step_count = 0
         
         # Başlangıç değerleri - kolayca değiştirilebilir
         self.init_y_min = 5.0
-        self.init_y_max = 20.0
-        self.init_z_min = -5.5
-        self.init_z_max = 5.5
-        self.init_x_min = -5.0
-        self.init_x_max = 5.0
-        self.init_pitch_min = -2.5
-        self.init_pitch_max = 2.5
-        self.init_yaw_min = -2.5
-        self.init_yaw_max = 2.5
+        self.init_y_max = 10.0
+        self.init_z_min = -3.0
+        self.init_z_max = 3.0
+        self.init_x_min = -3.0
+        self.init_x_max = 3.0
+        self.init_pitch_min = -2.0
+        self.init_pitch_max = 2.0
+        self.init_yaw_min = -2.0
+        self.init_yaw_max = 2.0
         
         # State normalizasyon ölçekleri (log-compress için)
         # Konuşma bazlı: state_normalization_discussion.txt
@@ -117,11 +117,11 @@ class Env():
 
         # --- TERMINAL ---
         # Ceiling: Daha erken yakala ve çok sert cezalandır (yukarı kaçmayı önle)
-        if dy >= 50.0 and vy > 0.3:  # Threshold düşürüldü: 60→50 (reward hacking önleme)
+        if dy >= 25.0 and vy > 0.3:  # Threshold düşürüldü: 60→50 (reward hacking önleme)
             self.termination_reason = "CeilingHit"
             return -1200.0, True  # Penalty artırıldı: -1000 → -1200
 
-        if abs(dx) >= 35.0 or abs(dz) >= 35.0:  # Sınır genişletildi: 25m → 30m
+        if abs(dx) >= 20.0 or abs(dz) >= 20.0:  # Sınır genişletildi: 25m → 30m
             self.termination_reason = "OutOfBounds"
             return -675.0, True  # Cezası artırıldı: -500 → -600
 
@@ -148,8 +148,8 @@ class Env():
                 missed_zone_reward = max(-350.0, base_penalty + distance_penalty)  # Max -350 cap
                 return missed_zone_reward, True
 
-            ok_vy   = (abs(vy) <= 3.5)   # sıkılaştırıldı: 4.5 → 2.5 (daha yumuşak iniş)
-            ok_vh   = (v_h <= 3.0)       # sıkılaştırıldı: 3.0 → 2.0 (daha kontrollü)
+            ok_vy   = (abs(vy) <= 4.5)   # sıkılaştırıldı: 4.5 → 2.5 (daha yumuşak iniş)
+            ok_vh   = (v_h <= 3.5)       # sıkılaştırıldı: 3.0 → 2.0 (daha kontrollü)
             ok_tilt = (up_y >= 0.85)     # aynı
             ok_spin = (w_mag <= 5.0)     # aynı
 
@@ -177,8 +177,8 @@ class Env():
             reward += height_penalty
         
         # YÜKSEK İRTİFA EKSTRA CEZASI (ceiling'e yaklaşmayı caydır - reward hacking önleme)
-        if dy > 30.0:
-            high_altitude_penalty = -0.07 * (dy - 30.0)  # dy=30m → 0, dy=50m → -1.0
+        if dy > 20.0:
+            high_altitude_penalty = -0.07 * (dy - 20.0)  # dy=30m → 0, dy=50m → -1.0
             reward += high_altitude_penalty
 
         # merkeze uzaklık cezası (artırıldı: drift sorununu çözmek için)
@@ -196,7 +196,7 @@ class Env():
         # NOT: Strateji tartışılabilir - yüksek irtifada erken kontrol için daha büyük ceza da mantıklı olabilir
         if vy < 0.0:  # Aşağı düşüyorsa
             # İrtifa azaldıkça artan penalty: dy=30m → ~1.48x, dy=20m → ~1.71x, dy=10m → ~2.36x, dy=5m → ~3.5x, dy=1.5m → ~7.0x
-            altitude_factor = 1.0 + (15.0 / (dy + 1.0))
+            altitude_factor = 1.0 + (20.0 / (dy + 1.0))
             reward -= 0.08 * abs(vy) * altitude_factor
 
         # stabilite: penalty ve bonus dengeli
@@ -214,7 +214,7 @@ class Env():
             reward += approach_bonus
         
         # MERKEZE YAKLAŞMA BONUSU (exponential - dead code'dan alındı)
-        center_bonus = 0.35 * np.exp(-dist_h / 20.0)  # Max ~0.12, merkeze yaklaştıkça artar (artırıldı: 0.09 → 0.12)
+        center_bonus = 0.35 * np.exp(-dist_h / 15.0)  # Max ~0.12, merkeze yaklaştıkça artar (artırıldı: 0.09 → 0.12)
         reward += center_bonus
         
         # YAVAŞ İNİŞ BONUSU (vy > -2 m/s iken)
