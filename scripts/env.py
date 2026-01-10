@@ -18,12 +18,12 @@ class Env():
         self.con = connector.Connector(ip,port)
         self.done = False
         self.termination_reason = "TimeLimit"
-        self.max_steps = 775
+        self.max_steps = 900
         self.step_count = 0
         
         # Başlangıç değerleri - kolayca değiştirilebilir
-        self.init_y_min = 5.0
-        self.init_y_max = 10.0
+        self.init_y_min = 28.0
+        self.init_y_max = 37.0
         self.init_z_min = -3.0
         self.init_z_max = 3.0
         self.init_x_min = -3.0
@@ -117,7 +117,7 @@ class Env():
 
         # --- TERMINAL ---
         # Ceiling: Daha erken yakala ve çok sert cezalandır (yukarı kaçmayı önle)
-        if dy >= 25.0 and vy > 0.3:  # Threshold düşürüldü: 60→50 (reward hacking önleme)
+        if dy >= 40.0 and vy > 0.3:  # Threshold düşürüldü: 60→50 (reward hacking önleme)
             self.termination_reason = "CeilingHit"
             return -1200.0, True  # Penalty artırıldı: -1000 → -1200
 
@@ -130,9 +130,9 @@ class Env():
             self.termination_reason = "Tilted"
             return -500.0, True
 
-        if w_mag > 8.0:
+        if w_mag > 7.3:
             self.termination_reason = "Spin"
-            return -650.0, True
+            return -675.0, True
 
         # --- LANDING CHECK ---
         if dy <= 1.7:
@@ -172,13 +172,13 @@ class Env():
         
         # DİKEY UZAKLIK (YÜKSEKLİK) CEZASI (yüksekten başlamayı caydır)
         # İrtifa arttıkça artan progressive ceza
-        if dy > 20.0:  # 20m üzeri için ceza
-            height_penalty = -0.2 * (dy - 20.0)  # dy=20m → 0, dy=30m → -2.0
+        if dy > 37.5:  # 20m üzeri için ceza
+            height_penalty = -0.2 * (dy - 37.5)  # dy=20m → 0, dy=30m → -2.0
             reward += height_penalty
         
         # YÜKSEK İRTİFA EKSTRA CEZASI (ceiling'e yaklaşmayı caydır - reward hacking önleme)
-        if dy > 20.0:
-            high_altitude_penalty = -0.07 * (dy - 20.0)  # dy=30m → 0, dy=50m → -1.0
+        if dy > 40.0:
+            high_altitude_penalty = -0.07 * (dy - 40.0)  # dy=30m → 0, dy=50m → -1.0
             reward += high_altitude_penalty
 
         # merkeze uzaklık cezası (artırıldı: drift sorununu çözmek için)
