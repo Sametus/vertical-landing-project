@@ -1,0 +1,4 @@
+Episode,Update,Return,Reason,StartAlt,StartDist,final_dist,final_vel
+1,881,-1083.2729,CeilingHit,10.16,5.34,26.79,18.94
+2,881,-306.8681,Spin,6.85,3.12,7.98,8.69
+3,881,-198.9089,Crash,9.97,5.11,3.73,-2.35

@@ -55,7 +55,6 @@ def load_checkpoint(model_path, state_path, agent):
             state = pickle.load(f)
         if "log_std" in state:
             agent.log_std.assign(np.array(state["log_std"], dtype=np.float32))
-            print(f"  log_std yüklendi: {agent.log_std.numpy()}")
     else:
         print(f"[WARN] State dosyası bulunamadı: {state_path} (log_std varsayılan değerde kalacak)")
     
@@ -70,35 +69,176 @@ def act_deterministic(agent, state):
     a = tf.tanh(mu)
     return a.numpy().astype(np.float32)
 
-def format_action(action):
+def format_action(action, detailed=False):
     """Action'ı okunabilir formata çevir"""
-    pitch, yaw, thrust, roll = action
-    thrust_pct = (thrust + 1) / 2 * 100  # 0-100% arası
-    return f"P:{pitch:+.2f} Y:{yaw:+.2f} T:{thrust_pct:.0f}% R:{roll:+.2f}"
+    pitch, yaw, thrust_raw, roll = action
+    # Thrust: [-1, 1] -> [0, 1] -> [0, 100]%
+    thrust_normalized = (thrust_raw + 1) / 2  # 0-1 arası
+    thrust_pct = thrust_normalized * 100  # 0-100% arası
+    thrust_kn = thrust_normalized * 15.0  # Max 15kN thrust (Unity'deki max thrust değeri)
+    
+    # RCS: [-1, 1] direkt birim olarak kullanılabilir (normalize edilmiş)
+    if detailed:
+        return (f"Thrust:{thrust_pct:.1f}% ({thrust_kn:.2f}kN) | "
+                f"RCS-Pitch:{pitch:+.3f} | RCS-Yaw:{yaw:+.3f} | RCS-Roll:{roll:+.3f}")
+    else:
+        return f"T:{thrust_pct:.1f}%/{thrust_kn:.2f}kN | P:{pitch:+.3f} Y:{yaw:+.3f} R:{roll:+.3f}"
 
-def format_state(state_raw):
+def format_state(state_raw, detailed=False):
     """State'i okunabilir formata çevir"""
     dx, dy, dz = state_raw[0], state_raw[1], state_raw[2]
     vx, vy, vz = state_raw[3], state_raw[4], state_raw[5]
+    wx, wy, wz = state_raw[6], state_raw[7], state_raw[8]
+    qx, qy, qz, qw = state_raw[9], state_raw[10], state_raw[11], state_raw[12]
+    
+    # Quaternion normalize
+    qnorm = (qx*qx + qy*qy + qz*qz + qw*qw) ** 0.5
+    if qnorm > 1e-6:
+        qx /= qnorm; qy /= qnorm; qz /= qnorm; qw /= qnorm
+    
+    # up_y: roketin yukarı doğru oryantasyonu (1.0 = dikey, 0.0 = yatay)
+    up_y = 1.0 - 2.0*(qx*qx + qz*qz)
+    
     dist_h = np.sqrt(dx**2 + dz**2)
-    return {
+    v_h = np.sqrt(vx**2 + vz**2)
+    w_mag = np.sqrt(wx**2 + wy**2 + wz**2)
+    
+    result = {
         'alt': dy,
         'dist': dist_h,
         'vy': vy,
         'vx': vx,
         'vz': vz,
+        'v_h': v_h,
+        'wx': wx,
+        'wy': wy,
+        'wz': wz,
+        'w_mag': w_mag,
+        'up_y': up_y,
+        'qx': qx,
+        'qy': qy,
+        'qz': qz,
+        'qw': qw,
     }
+    return result
 
-def print_episode_info(episode, step, state_info, action, reward, reason=None):
-    """Episode bilgilerini konsola yazdır"""
+def compute_upright_action(state_raw, target_up_y=1.0, strength=3.0):
+    """
+    Roketi dik konuma yumuşak bir şekilde geçirmek için kontrol action'ı hesapla
+    target_up_y=1.0: Tam dik konum
+    strength: Kontrol kuvveti (yüksek = daha agresif, düşük = daha yumuşak)
+    """
+    # State'ten tilt ve açısal hızı hesapla
+    qx, qy, qz, qw = state_raw[9], state_raw[10], state_raw[11], state_raw[12]
+    wx, wy, wz = state_raw[6], state_raw[7], state_raw[8]
+    
+    # Quaternion normalize
+    qnorm = (qx*qx + qy*qy + qz*qz + qw*qw) ** 0.5
+    if qnorm > 1e-6:
+        qx /= qnorm; qy /= qnorm; qz /= qnorm; qw /= qnorm
+    
+    # up_y: roketin yukarı doğru oryantasyonu
+    up_y = 1.0 - 2.0*(qx*qx + qz*qz)
+    
+    # Tilt hatası: ne kadar uzaktayız hedef konumdan
+    tilt_error = target_up_y - up_y
+    
+    # Eğer zaten dikse, minimal kontrol
+    if up_y > 0.99:
+        pitch_correction = -0.5 * qx  # Çok hafif
+        yaw_correction = -0.5 * qz
+        roll_correction = -0.3 * wx
+    else:
+        # Pitch kontrolü: qx'e göre (ön-arka eğim)
+        pitch_correction = -strength * qx
+        
+        # Yaw kontrolü: qz'e göre (sağ-sol dönüş)
+        yaw_correction = -strength * qz
+        
+        # Roll kontrolü: açısal hızı sıfırlamaya çalış
+        roll_correction = -1.0 * wx
+    
+    # Action: [pitch, yaw, thrust, roll]
+    pitch = np.clip(pitch_correction, -1.0, 1.0)
+    yaw = np.clip(yaw_correction, -1.0, 1.0)
+    roll = np.clip(roll_correction, -1.0, 1.0)
+    thrust = -1.0  # Serbest düşüş, thrust yok
+    
+    return np.array([pitch, yaw, thrust, roll], dtype=np.float32)
+
+def compute_stability_action(state_raw):
+    """
+    Serbest düşüş sırasında roketin dengede kalması için kontrol action'ı hesapla
+    Basit PD kontrolü kullanarak tilt ve spin'i azaltmaya çalışır
+    Yan yatma durumunda daha agresif düzeltme yapar
+    """
+    # State'ten tilt ve açısal hızı hesapla
+    qx, qy, qz, qw = state_raw[9], state_raw[10], state_raw[11], state_raw[12]
+    wx, wy, wz = state_raw[6], state_raw[7], state_raw[8]
+    
+    # Quaternion normalize
+    qnorm = (qx*qx + qy*qy + qz*qz + qw*qw) ** 0.5
+    if qnorm > 1e-6:
+        qx /= qnorm; qy /= qnorm; qz /= qnorm; qw /= qnorm
+    
+    # up_y: roketin yukarı doğru oryantasyonu
+    up_y = 1.0 - 2.0*(qx*qx + qz*qz)
+    
+    # Tilt hatası: ne kadar yatık
+    tilt_error = 1.0 - up_y
+    
+    # Pitch kontrolü: qx'e göre (ön-arka eğim)
+    # Eğer qx pozitifse, roket öne eğilmiş, pitch negatif olmalı (geri)
+    base_strength = 3.0  # Temel kuvvet katsayısı
+    pitch_correction = -base_strength * qx
+    
+    # Yaw kontrolü: qz'e göre (sağ-sol dönüş)
+    # Eğer qz pozitifse, roket sağa dönmüş, yaw negatif olmalı (sola)
+    yaw_correction = -base_strength * qz
+    
+    # Roll kontrolü: açısal hız wx'e göre (x ekseni etrafında dönüş)
+    roll_correction = -1.0 * wx  # Açısal hızı sıfırlamaya çalış
+    
+    # Yan yatma durumunda daha agresif düzeltme
+    if up_y < 0.7:  # Çok yatık (>45°)
+        pitch_correction *= 2.0  # 2x daha güçlü
+        yaw_correction *= 2.0
+        roll_correction *= 1.5
+    elif up_y < 0.85:  # Orta yatık (30-45°)
+        pitch_correction *= 1.5
+        yaw_correction *= 1.5
+        roll_correction *= 1.2
+    elif up_y > 0.95:  # Çok dikey, minimal kontrol
+        pitch_correction *= 0.2
+        yaw_correction *= 0.2
+        roll_correction *= 0.2
+    elif up_y > 0.90:  # İyi durum, hafif kontrol
+        pitch_correction *= 0.5
+        yaw_correction *= 0.5
+        roll_correction *= 0.5
+    
+    # Action: [pitch, yaw, thrust, roll]
+    # Thrust = -1 (0% thrust, serbest düşüş)
+    pitch = np.clip(pitch_correction, -1.0, 1.0)
+    yaw = np.clip(yaw_correction, -1.0, 1.0)
+    roll = np.clip(roll_correction, -1.0, 1.0)
+    thrust = -1.0  # Serbest düşüş, thrust yok
+    
+    return np.array([pitch, yaw, thrust, roll], dtype=np.float32)
+
+def print_test_info(test_num, step, state_info, action, reward, reason=None):
+    """Test bilgilerini konsola yazdır"""
     timestamp = datetime.now().strftime("%H:%M:%S")
     alt_str = f"Alt:{state_info['alt']:.2f}m"
     dist_str = f"Dist:{state_info['dist']:.2f}m"
     vy_str = f"Vy:{state_info['vy']:.2f}m/s"
-    action_str = format_action(action)
-    reward_str = f"R:{reward:+.1f}"
+    vh_str = f"Vh:{state_info['v_h']:.2f}m/s"
+    action_str = format_action(action, detailed=True)
+    reward_str = f"Reward:{reward:+.1f}"
     
-    line = f"[{timestamp}] EP:{episode} Step:{step:3d} | {alt_str} {dist_str} {vy_str} | {action_str} | {reward_str}"
+    line = (f"[{timestamp}] Test:{test_num} Step:{step:3d} | "
+            f"State: {alt_str} {dist_str} {vy_str} {vh_str} | "
+            f"Action: {action_str} | {reward_str}")
     if reason:
         line += f" | {reason}"
     print(line)
@@ -110,7 +250,7 @@ def main():
     parser.add_argument('--update', type=int, default=None,
                         help='Update numarası (örn: 300) - en son modeli kullanmak için')
     parser.add_argument('--episodes', type=int, default=-1,
-                        help='Kaç episode çalıştırılacak (-1 = süresiz)')
+                        help='Kaç test çalıştırılacak (-1 = süresiz)')
     parser.add_argument('--wait-on-success', type=float, default=2.5,
                         help='Success durumunda bekleme süresi (saniye, default: 2.5)')
     parser.add_argument('--show-steps', action='store_true',
@@ -175,36 +315,32 @@ def main():
         sys.exit(1)
     
     # Play-test başlat
-    print("=" * 80)
+    print("*" * 80)
     print("PLAY-TEST BAŞLATILIYOR")
-    print("=" * 80)
+    print("*" * 80)
     print(f"Model: {os.path.basename(model_path)}")
     print(f"Başlangıç koşulları: Yükseklik {environment.init_y_min}-{environment.init_y_max}m, Yatay ±{environment.init_x_max}m")
     print(f"Success bekleme süresi: {args.wait_on_success}s")
-    print(f"Episode limiti: {'Süresiz' if args.episodes == -1 else args.episodes}")
-    print("=" * 80)
-    print("\nÇıkmak için Ctrl+C basın.\n")
+    print(f"Test limiti: {'Süresiz' if args.episodes == -1 else args.episodes}")
+    print("*" * 80)
+    print()
     
-    episode = 0
+    test_num = 0
     success_count = 0
     crash_count = 0
     other_count = 0
     
     try:
-        while args.episodes == -1 or episode < args.episodes:
-            episode += 1
+        while args.episodes == -1 or test_num < args.episodes:
+            test_num += 1
             
-            # Yeni episode başlat
+            # Yeni test başlat - training mantığı: initialStart() sonrası direkt readStates()
             environment.initialStart()
             state_raw = as_float32(environment.readStates())
             state_norm = as_float32(environment.normalize_state(state_raw))
             
             # Başlangıç bilgileri
             start_info = format_state(state_raw)
-            print(f"\n{'='*80}")
-            print(f"EPISODE {episode} BAŞLADI")
-            print(f"   Başlangıç: Alt:{start_info['alt']:.2f}m, Dist:{start_info['dist']:.2f}m")
-            print(f"{'='*80}")
             
             step = 0
             total_reward = 0.0
@@ -220,50 +356,84 @@ def main():
                 total_reward += reward
                 step += 1
                 
-                # Her adımı göster (eğer isteniyorsa) veya her 10 adımda bir
-                if args.show_steps or step % 10 == 0 or done:
+                # Sadece episode sonunda göster (veya --show-steps açıksa)
+                if args.show_steps or done:
                     state_info = format_state(state_raw)
                     reason = getattr(environment, 'termination_reason', None) if done else None
-                    print_episode_info(episode, step, state_info, action, reward, reason)
+                    print_test_info(test_num, step, state_info, action, reward, reason)
                 
                 # State güncelle
                 state_raw = as_float32(next_state_raw)
                 state_norm = as_float32(environment.normalize_state(state_raw))
             
-            # Episode sonu - son state zaten elimizde (next_state_raw'dan gelen)
+            # Test sonu - son state zaten elimizde (next_state_raw'dan gelen)
             reason = getattr(environment, 'termination_reason', 'Unknown')
             final_info = format_state(state_raw)  # Son state'i kullan (step()'den gelen)
             
-            print(f"\n{'='*80}")
-            print(f"EPISODE {episode} BİTTİ")
-            print(f"   Sonuç: {reason}")
-            print(f"   Step sayısı: {step}")
-            print(f"   Toplam reward: {total_reward:.2f}")
-            print(f"   Son durum: Alt:{final_info['alt']:.2f}m, Dist:{final_info['dist']:.2f}m, Vy:{final_info['vy']:.2f}m/s")
+            print(f"\n{'*'*80}")
+            print(f"TEST {test_num} BİTTİ")
+            print(f"{'*'*80}")
+            print(f"Sonuç: {reason}")
+            print(f"Step sayısı: {step}")
+            print(f"Toplam reward: {total_reward:.2f}")
+            print(f"\nBaşlangıç State:")
+            print(f"  Alt:{start_info['alt']:.2f}m | Dist:{start_info['dist']:.2f}m | "
+                  f"Vy:{start_info['vy']:.2f}m/s | Vh:{start_info['v_h']:.2f}m/s")
+            print(f"\nBitiş State:")
+            print(f"  Alt:{final_info['alt']:.2f}m | Dist:{final_info['dist']:.2f}m | "
+                  f"Vy:{final_info['vy']:.2f}m/s | Vh:{final_info['v_h']:.2f}m/s")
             
-            # İstatistikler
             if reason == "Success":
                 success_count += 1
-                print(f"   BAŞARILI İNİŞ! ({success_count}. başarı)")
-                print(f"   {args.wait_on_success} saniye bekleniyor...")
-                time.sleep(args.wait_on_success)
+                print(f"\nBAŞARILI İNİŞ! ({success_count}. başarı)")
+                
+                # Serbest düşüş: Success sonrası roketin yere düşmesi için
+                # ÖNEMLİ: Training'de serbest düşüş yok, ama test için ekliyoruz
+                # Unity'nin episode reset mekanizmasını tetiklememek için dikkatli olmalıyız
+                free_fall_steps = 0
+                max_free_fall_steps = 200
+                
+                # Serbest düşüş döngüsü
+                while free_fall_steps < max_free_fall_steps:
+                    free_fall_action = compute_stability_action(state_raw)
+                    
+                    # Step gönder - Unity'den state al
+                    next_state_raw, step_done, reward = environment.step(free_fall_action)
+                    state_raw = as_float32(next_state_raw)
+                    free_fall_steps += 1
+                    
+                    # State kontrolü
+                    free_fall_info = format_state(state_raw)
+                    dy = state_raw[1]
+                    up_y = free_fall_info['up_y']
+                    
+                    if dy <= 0.2:
+                        break
+                    if dy < -0.5:
+                        break
+                    if up_y < 0.2:
+                        break
             elif reason == "Crash":
                 crash_count += 1
             else:
                 other_count += 1
             
-            print(f"   İstatistikler: Success:{success_count} | Crash:{crash_count} | Diğer:{other_count} | Başarı Oranı: {success_count/episode*100:.1f}%")
-            print(f"{'='*80}\n")
+            print(f"{'*'*80}\n")
+            
+            # Training mantığı: Episode bitince direkt initialStart() çağrılıyor
+            # environment.done ve step_count'u initialStart() içinde zaten sıfırlanıyor
+            # Bu yüzden burada manuel sıfırlama gereksiz ve sorun çıkarabilir
             
     except KeyboardInterrupt:
-        print("\n\n" + "=" * 80)
-        print("[INFO] TEST DURDURULDU")
-        print("=" * 80)
-        print(f"Toplam episode: {episode}")
-        print(f"Başarı: {success_count} ({success_count/episode*100:.1f}%)")
-        print(f"Crash: {crash_count}")
-        print(f"Diğer: {other_count}")
-        print("=" * 80)
+        print("\n\n" + "*" * 80)
+        print("TEST DURDURULDU")
+        print("*" * 80)
+        print(f"Toplam test: {test_num}")
+        if test_num > 0:
+            print(f"Başarı: {success_count} ({success_count/test_num*100:.1f}%)")
+            print(f"Crash: {crash_count}")
+            print(f"Diğer: {other_count}")
+        print("*" * 80)
 
 if __name__ == "__main__":
     main()

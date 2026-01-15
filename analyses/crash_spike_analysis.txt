@@ -1,0 +1,25 @@
+================================================================================
+CRASH PATLAMASI ANALİZİ
+================================================================================
+
+Analiz Tarihi: 2026-01-10 20:24:14
+Hedef Episode: 427
+
+BAŞARI ORANLARI:
+  Önce: 16.30%
+  Crash dönemi: 11.36%
+
+CRASH ORANI:
+  Önce: 21.63%
+  Crash dönemi: 9.36%
+  Artış: -12.27%
+
+CRASH DÖNEMİ TERMINATION REASONS:
+  OutOfBounds                 314 ( 42.0%)
+  CeilingHit                  172 ( 23.0%)
+  Success                      85 ( 11.4%)
+  MissedZone                   85 ( 11.4%)
+  Crash                        70 (  9.4%)
+  Spin                         11 (  1.5%)
+  Tilted                        8 (  1.1%)
+  TimeLimit                     3 (  0.4%)
