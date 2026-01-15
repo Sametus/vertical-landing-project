@@ -1,10 +1,10 @@
-# REİNFORCEMENT LEARNING (PEKİŞTİRMELİ ÖĞRENME) İLE 3 BOYUTLU DİKEY İNİŞLİ ROKET KONTROLÜ
+# Reinforcement Learning (Pekiştirmeli Öğrenme) ile 3 Boyutlu Dikey İnişli Roket Kontrolü
 
-![Test Demo](images/test_demo.gif)
+![Proje Görseli](images/ss1.png)
 
-Bu proje, yapay zeka kullanarak bir roketin otonom olarak dikey iniş yapmasını öğreten bir derin pekiştirmeli öğrenme (Deep Reinforcement Learning) simülasyonudur. Unity fizik motoru ile gerçekçi bir 3D ortamda, PPO (Proximal Policy Optimization) algoritması kullanılarak eğitilen bir AI ajanı, farklı başlangıç koşullarından (farklı yükseklikler, konumlar ve açılar) başlayarak roketi hedef bölgeye güvenli bir şekilde indirmeyi öğrenir.
+Unity fizik motoru ve PPO (Proximal Policy Optimization) algoritması kullanılarak eğitilen bir AI ajanının, farklı başlangıç koşullarından roketi hedef bölgeye güvenli bir şekilde indirmesini öğreten derin pekiştirmeli öğrenme projesi.
 
-Proje, curriculum learning (müfredat öğrenme) yaklaşımıyla kademeli olarak zorluk seviyesini artırarak eğitim yapar. Başlangıçta düşük irtifalardan (5-15m) başlayıp, ajanın temel kontrol becerilerini öğrendikten sonra daha yüksek irtifalara (40m+) geçiş yapar. Bu sayede ajan önce dikey hız kontrolünü, sonra açısal denge kontrolünü öğrenir.
+Proje, curriculum learning (müfredat öğrenme) yaklaşımıyla kademeli olarak zorluk seviyesini artırarak eğitim yapar. Ajan önce düşük irtifalardan dikey hız kontrolünü, sonra daha yüksek irtifalarda açısal denge kontrolünü öğrenir.
 
 ## Proje Yapısı
 
@@ -291,6 +291,8 @@ Son adım ödülü, değer fonksiyonu öğrenimini stabilize etmek için 0.35x i
 - **Pandas**: Veri analizi ve CSV işleme
 
 ## Projenin Runtime Akışı
+
+<video src="videos/train-video ‐ Clipchamp ile yapıldı.mp4" controls width="100%"></video>
 
 ### Eğitim Süreci (train_main.py)
 
@@ -618,10 +620,7 @@ python analyses/analyze_sessions.py
 
 Eğitilmiş modelin gerçek zamanlı performansını görmek için:
 
-![Test Demo GIF](images/test_demo.gif)
-
-Daha uzun bir demo videosu için:
-- [Demo Video](videos/test_demo.mp4)
+<video src="videos/train-video ‐ Clipchamp ile yapıldı.mp4" controls width="100%"></video>
 
 ## Kullanım Kılavuzu
 
