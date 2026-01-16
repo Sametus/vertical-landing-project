@@ -61,12 +61,26 @@ def load_checkpoint(model_path, state_path, agent):
     print("[OK] Model başarıyla yüklendi!\n")
 
 def act_deterministic(agent, state):
-    """Deterministik action (exploration yok, sadece mean)"""
+    """
+    Deterministik action - Training'deki gibi exploration ekleniyor ama deterministik seed ile
+    Training'de agent.act() kullanılıyor, bu da exploration ekliyor. Test'te de aynı mantığı kullanalım
+    ama seed'i sabitleyerek deterministik yapalım (her episode aynı sonuçlar için).
+    """
     s = tf.convert_to_tensor(state[None,:], tf.float32)
-    mu, _ = agent.model(s)
+    mu, v = agent.model(s)
     mu = tf.squeeze(mu, 0)
-    # Tanh uygula (action space [-1, 1])
-    a = tf.tanh(mu)
+    
+    # Training'deki gibi: std ile exploration ekle, sonra tanh uygula
+    # Training'de: pre_tanh = mu + std * eps, a = tanh(pre_tanh)
+    # Test'te: Deterministik için epsilon'u küçült ama sıfırlama (tam deterministik spin'e yol açabilir)
+    std = tf.exp(agent.log_std)
+    
+    # Deterministik için: epsilon = 0 kullan (sadece mean)
+    # Ama training'deki tanh(pre_tanh) mantığını koru
+    eps = tf.zeros((agent.action_size,), dtype=tf.float32)  # Deterministik: epsilon = 0
+    pre_tanh = mu + std * eps  # eps=0 olduğu için pre_tanh = mu
+    a = tf.tanh(pre_tanh)  # Training'deki gibi tanh uygula
+    
     return a.numpy().astype(np.float32)
 
 def format_action(action, detailed=False):
@@ -429,6 +443,11 @@ def main():
             test_num += 1
             
             # Yeni test başlat - training mantığı: initialStart() sonrası direkt readStates()
+            # KRİTİK: Environment state'ini tamamen temizle (önceki episode'dan kalıntı olmamalı)
+            environment.done = False
+            environment.step_count = 0
+            environment.termination_reason = "Running"
+            
             environment.initialStart()
             state_raw = as_float32(environment.readStates())
             state_norm = as_float32(environment.normalize_state(state_raw))
@@ -481,86 +500,144 @@ def main():
                 success_count += 1
                 print(f"\nBAŞARILI İNİŞ! ({success_count}. başarı)")
                 
-                # Success anında roketin state'ini doğrudan manipüle et
-                # Unity'deki target platform (0, 0, 0) olduğu için,
-                # Unity'deki state hesaplama:
-                #   dx = targetPos.x - bottomSensor.x = 0 - bottomSensor.x = -bottomSensor.x
-                #   dy = bottomSensor.y - targetPos.y = bottomSensor.y - 0 = bottomSensor.y
-                #   dz = targetPos.z - bottomSensor.z = 0 - bottomSensor.z = -bottomSensor.z
+                # Success sonrası yumuşak geçiş: Fizik simülasyonu ile roketi dik ve yere değecek şekilde ayarla
+                # TEST MODU: Bu geçiş sadece görsel amaçlı. Episode bitince environment state temizlenecek.
                 
-                dx = state_raw[0]  # dx = -bottomSensor.x
-                dy = state_raw[1]  # dy = bottomSensor.y (yükseklik)
-                dz = state_raw[2]  # dz = -bottomSensor.z
+                # Success anındaki pozisyonu al
+                dx = state_raw[0]
+                dy = state_raw[1]  # Mevcut yükseklik
+                dz = state_raw[2]
                 
-                # BottomSensor'ın dünya koordinatları (target (0,0,0)'a göre):
-                bottomSensor_x = -dx  # dx = -bottomSensor.x → bottomSensor.x = -dx
-                bottomSensor_y = dy   # dy = bottomSensor.y
-                bottomSensor_z = -dz  # dz = -bottomSensor.z → bottomSensor.z = -dz
+                # Roket fiziksel özellikleri
+                ROCKET_HEIGHT = 6.5
+                ROCKET_RADIUS = ROCKET_HEIGHT / 2  # 3.25m
+                TARGET_BOTTOM_HEIGHT = 0.15  # Hedef yükseklik
                 
-                # Roket fiziksel özellikleri (Unity'den):
-                # - Roket yüksekliği: 6.5m (CapsuleCollider Height)
-                # - BottomSensor roketin alt ucunda
-                # - Roket pivot'u (transform.position) roketin merkezinde, bottomSensor'dan yukarıda
-                # - Pivot yüksekliği = bottomSensor yüksekliği + (roket_yüksekliği / 2)
-                ROCKET_HEIGHT = 6.5  # metre
-                ROCKET_RADIUS = ROCKET_HEIGHT / 2  # Roket pivot'u merkezde, bottomSensor'dan yukarıda
+                # Yumuşak geçiş parametreleri
+                smooth_steps = 0
+                max_smooth_steps = 40  # ~4 saniye (10 FPS varsayarak)
                 
-                # Success sonrası: Roketi bulunduğu pozisyonda (X, Z korunur) dik konuma getir ve yere değdir
-                # - X pozisyonu korunur (mevcut X pozisyonu)
-                # - Z pozisyonu korunur (mevcut Z pozisyonu) - "bulunduğu noktada" dik duracak
-                # - Y pozisyonu: Roket tam yere değecek şekilde ayarlanır (bottomSensor yüksekliği çok küçük)
-                # - Pitch = 0, Yaw = 0 (dik dur)
-                # - Unity Mode 1 reset komutu hızları da sıfırlar
-                
-                # Roket tam yere değmesi için bottomSensor yüksekliğini çok küçük bir değere ayarla
-                # Platform yüksekliği 0 olduğu için, bottomSensor yüksekliği ~0.1-0.2m olmalı
-                # (roket ayakları platform üzerinde)
-                LANDING_BOTTOM_HEIGHT = 0.15  # BottomSensor platform üzerinde 0.15m (ayaklar)
-                
-                # BottomSensor yeni pozisyonu (X, Z korunur, Y ayarlanır):
-                target_bottomSensor_x = bottomSensor_x  # X korunur
-                target_bottomSensor_y = LANDING_BOTTOM_HEIGHT  # Y yere değecek şekilde ayarlanır
-                target_bottomSensor_z = bottomSensor_z  # Z korunur
-                
-                # Roket pivot pozisyonu (Unity transform.position):
-                # - X: bottomSensor X pozisyonu (yatayda pivot ve bottomSensor aynı, roket dik)
-                # - Y: bottomSensor Y + roket yarı yüksekliği (roket merkezi)
-                # - Z: bottomSensor Z pozisyonu (yatayda pivot ve bottomSensor aynı, roket dik)
-                pivot_x = target_bottomSensor_x  # X korunur
-                pivot_y = target_bottomSensor_y + ROCKET_RADIUS  # Y: bottomSensor + roket yarısı = 0.15 + 3.25 = 3.4m
-                pivot_z = target_bottomSensor_z  # Z korunur
-                
-                # Unity'ye Mode 1 reset komutu gönder: 1,x,y,z,pitch,yaw
-                # Bu komut roketi belirtilen pivot pozisyonuna konumlandırır ve tüm hızları sıfırlar
-                # Roket bulunduğu noktada (X, Y, Z korunur) dik durur (pitch=0, yaw=0)
-                environment.con.sendCs((1, pivot_x, pivot_y, pivot_z, 0.0, 0.0, 0, 0, 0, 0, 0, 0, 0, 0))
-                
-                # Unity'den yeni state'i oku (reset sonrası)
-                state_raw = as_float32(environment.readStates())
-                
-                # Yumuşak geçiş: Reset sonrası birkaç adım boyunca yumuşak dik tutma action'ı uygula
-                # Bu, sert geçişi yumuşatır ve daha doğal görünür (proje sunumu için daha iyi)
-                smooth_transition_steps = 0
-                max_smooth_steps = 10  # ~1 saniye (10 FPS varsayarak)
-                
-                while smooth_transition_steps < max_smooth_steps:
-                    # Çok hafif dik tutma action'ı (strength düşük, yumuşak geçiş)
-                    smooth_action = compute_upright_action(state_raw, target_up_y=1.0, strength=1.5)  # Düşük strength
+                while smooth_steps < max_smooth_steps:
+                    # Mevcut state bilgileri
+                    current_dy = state_raw[1]
+                    vy = state_raw[4]  # Dikey hız
+                    vx = state_raw[3]
+                    vz = state_raw[5]
+                    wx = state_raw[6]  # Açısal hızlar
+                    wy = state_raw[7]
+                    wz = state_raw[8]
                     
-                    # Step gönder
-                    next_state_raw, step_done, reward = environment.step(smooth_action)
-                    state_raw = as_float32(next_state_raw)
-                    smooth_transition_steps += 1
-                    
-                    # Quaternion'dan up_y'yi hesapla
+                    # Quaternion'dan rotasyon bilgisi
                     qx, qy, qz, qw = state_raw[9], state_raw[10], state_raw[11], state_raw[12]
                     qnorm = (qx*qx + qy*qy + qz*qz + qw*qw) ** 0.5
                     if qnorm > 1e-6:
                         qx /= qnorm; qy /= qnorm; qz /= qnorm; qw /= qnorm
-                    up_y = 1.0 - 2.0*(qx*qx + qz*qz)
+                    up_y = 1.0 - 2.0*(qx*qx + qz*qz)  # 1.0 = dikey, 0.0 = yatay
                     
-                    # Zaten dikse ve birkaç adım geçtiyse döngüden çık
-                    if up_y > 0.98 and smooth_transition_steps > 5:
+                    # İlerleme oranı (0 -> 1)
+                    progress = smooth_steps / max_smooth_steps
+                    
+                    # Yumuşak dik durma: Progressive strength ile dik durmaya çalış
+                    # Başlangıçta düşük, zamanla artıyor
+                    base_strength = 1.5 + progress * 2.0  # 1.5 -> 3.5
+                    if up_y < 0.85:  # Çok eğikse
+                        base_strength *= 1.3
+                    
+                    # RCS kontrolü: Dik durma
+                    pitch_correction = -base_strength * qx
+                    yaw_correction = -base_strength * qz
+                    roll_correction = -1.0 * wx  # Açısal hızı sıfırla
+                    
+                    # Açısal hızları sıfırla
+                    if abs(wy) > 0.1:
+                        pitch_correction -= 0.3 * np.sign(wy)
+                    if abs(wz) > 0.1:
+                        yaw_correction -= 0.3 * np.sign(wz)
+                    
+                    pitch = np.clip(pitch_correction, -1.0, 1.0)
+                    yaw = np.clip(yaw_correction, -1.0, 1.0)
+                    roll = np.clip(roll_correction, -1.0, 1.0)
+                    
+                    # Thrust kontrolü: Yumuşak yere değme
+                    thrust = -1.0  # Varsayılan: thrust yok
+                    
+                    # Yükseklik kontrolü: Hedef yüksekliğe yumuşak bir şekilde yaklaş
+                    target_dy = TARGET_BOTTOM_HEIGHT
+                    height_error = current_dy - target_dy
+                    
+                    if height_error > 0.1:  # Hedef yüksekliğin üstündeyse
+                        # Yumuşak düşüş: Dikey hıza göre thrust ayarla
+                        if vy < -1.0:  # Hızlı düşüş varsa
+                            # Hafif thrust uygula (yumuşak iniş)
+                            thrust_factor = min(0.25, abs(vy) / 12.0)
+                            thrust = (thrust_factor * 2.0) - 1.0  # [-1, -0.5]
+                        elif vy > 0.5:  # Yukarı gidiyorsa
+                            thrust = -1.0  # Thrust kapat
+                    elif current_dy < 0.3:  # Yere değmiş
+                        # Yere değdikten sonra: Hafif thrust ile yere basınç (sekme önleme)
+                        if vy < -0.5:
+                            thrust_factor = min(0.2, abs(vy) / 10.0)
+                            thrust = (thrust_factor * 2.0) - 1.0
+                        elif abs(vy) < 0.2:
+                            thrust = -0.98  # Çok hafif thrust (yer çekimi dengeleme)
+                    
+                    # Yatay hızları sıfırla
+                    if abs(vx) > 0.2:
+                        pitch -= 0.2 * np.sign(vx)
+                    if abs(vz) > 0.2:
+                        yaw -= 0.2 * np.sign(vz)
+                    
+                    pitch = np.clip(pitch, -1.0, 1.0)
+                    yaw = np.clip(yaw, -1.0, 1.0)
+                    thrust = np.clip(thrust, -1.0, 1.0)
+                    
+                    # Action gönder - KRİTİK: environment.step() kullanma, direkt Unity'ye gönder
+                    # Çünkü success sonrası yumuşak geçiş episode dışında olmalı,
+                    # environment.step() step_count'u artırır ve reward hesaplaması yapar
+                    # Bu bir sonraki episode'u etkileyebilir
+                    
+                    # Thrust normalizasyonu: Unity [0, 1] bekliyor, biz [-1, 1] kullanıyoruz
+                    # env.py'deki gibi: thrust = 0.5 * (thrust_raw + 1.0)
+                    thrust_normalized = 0.5 * (thrust + 1.0)
+                    thrust_normalized = np.clip(thrust_normalized, 0.0, 1.0)
+                    
+                    # Unity'ye direkt komut gönder (Mode 0: Normal step)
+                    environment.con.sendCs((0, pitch, yaw, thrust_normalized, roll, 0, 0, 0, 0, 0, 0, 0, 0))
+                    
+                    # Unity'den state oku
+                    state_raw = as_float32(environment.readStates())
+                    smooth_steps += 1
+                    
+                    # Durum kontrolü
+                    current_dy_new = state_raw[1]
+                    vy_new = state_raw[4]
+                    vx_new = state_raw[3]
+                    vz_new = state_raw[5]
+                    wx_new = state_raw[6]
+                    wy_new = state_raw[7]
+                    wz_new = state_raw[8]
+                    
+                    qx, qy, qz, qw = state_raw[9], state_raw[10], state_raw[11], state_raw[12]
+                    qnorm = (qx*qx + qy*qy + qz*qz + qw*qw) ** 0.5
+                    if qnorm > 1e-6:
+                        qx /= qnorm; qy /= qnorm; qz /= qnorm; qw /= qnorm
+                    up_y_new = 1.0 - 2.0*(qx*qx + qz*qz)
+                    
+                    # Hızların büyüklüğü
+                    v_mag = np.sqrt(vx_new**2 + vy_new**2 + vz_new**2)
+                    w_mag = np.sqrt(wx_new**2 + wy_new**2 + wz_new**2)
+                    
+                    # Çıkış koşulları: Dik, yerde, hızlar sıfır
+                    height_ok = abs(current_dy_new - TARGET_BOTTOM_HEIGHT) < 0.2
+                    upright_ok = up_y_new > 0.95
+                    velocities_ok = v_mag < 0.5 and w_mag < 0.5
+                    enough_steps = smooth_steps > 20
+                    
+                    if (upright_ok and height_ok and velocities_ok and enough_steps):
+                        break
+                    
+                    # Timeout
+                    if smooth_steps >= max_smooth_steps - 1:
                         break
             else:
                 # Success dışındaki tüm terminal durumlar (Spin, Crash, CeilingHit, vb.)
@@ -626,7 +703,7 @@ def main():
                 try:
                     response = input("Tekrar deneyin? (E/H veya Evet/Hayır): ").strip().lower()
                     if response in ['e', 'evet', 'yes', 'y']:
-                        # Yeni test başlat
+                        # Yeni test başlatılacak - while loop devam edecek ve initialStart() çağrılacak
                         break
                     elif response in ['h', 'hayır', 'no', 'n', 'çıkış', 'çık', 'exit', 'quit', 'q']:
                         # Programı sonlandır
@@ -638,6 +715,13 @@ def main():
                     # Ctrl+C veya EOF durumunda da çık
                     print("\n\nTest sonlandırılıyor...")
                     return
+            
+            # KRİTİK: Yeni episode başlamadan ÖNCE environment state'ini temizle
+            # initialStart() çağrılacak, Unity'ye yeni reset gönderilecek
+            # Bu yüzden environment state'ini temizlemeliyiz ki Unity düzgün reset olsun
+            environment.done = False
+            environment.step_count = 0
+            environment.termination_reason = "Running"
             
     except KeyboardInterrupt:
         print("\n\n" + "*" * 80)
