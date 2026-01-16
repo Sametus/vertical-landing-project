@@ -776,7 +776,6 @@ Projeyi geliştirmek için yapılabilecekler:
 ## Teşekkürler
 
 - Unity Technologies - fizik motoru için
-- OpenAI - PPO algoritması için
 - TensorFlow ekibi - derin öğrenme framework'ü için
 
 ## İletişim
