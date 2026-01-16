@@ -444,11 +444,20 @@ def main():
             
             # Yeni test başlat - training mantığı: initialStart() sonrası direkt readStates()
             # KRİTİK: Environment state'ini tamamen temizle (önceki episode'dan kalıntı olmamalı)
+            # NOT: initialStart() zaten done=False ve step_count=0 yapıyor, ama yine de açıkça yapalım
             environment.done = False
             environment.step_count = 0
             environment.termination_reason = "Running"
             
+            # Unity'ye reset komutu gönder
             environment.initialStart()
+            
+            # KRİTİK: Unity'nin reset'i işlemesi için bir physics step göndermemiz gerekebilir
+            # Ama training'de bu yapılmıyor, sadece initialStart() sonrası direkt readStates()
+            # O yüzden training ile aynı mantığı kullanalım
+            
+            # Başlangıç state'ini oku (Unity reset komutunun response'unu bekler)
+            # initialStart() Unity'ye Mode 1 reset gönderir, Unity bir response gönderir
             state_raw = as_float32(environment.readStates())
             state_norm = as_float32(environment.normalize_state(state_raw))
             
@@ -537,49 +546,100 @@ def main():
                     # İlerleme oranı (0 -> 1)
                     progress = smooth_steps / max_smooth_steps
                     
+                    # Açısal hız büyüklüğü (spin kontrolü için - bir kere hesapla)
+                    w_mag_current = np.sqrt(wx*wx + wy*wy + wz*wz)
+                    
                     # Yumuşak dik durma: Progressive strength ile dik durmaya çalış
-                    # Başlangıçta düşük, zamanla artıyor
+                    # KRİTİK: Spin durumunda daha agresif RCS kontrolü
                     base_strength = 1.5 + progress * 2.0  # 1.5 -> 3.5
                     if up_y < 0.85:  # Çok eğikse
                         base_strength *= 1.3
+                    
+                    # Spin durumunda RCS'yi artır (kontrolsüz dönüşü önlemek için)
+                    if w_mag_current > 2.0:  # Spin durumu
+                        base_strength *= 1.5  # %50 daha agresif RCS
+                    elif w_mag_current > 1.0:  # Hafif spin
+                        base_strength *= 1.2  # %20 daha agresif RCS
                     
                     # RCS kontrolü: Dik durma
                     pitch_correction = -base_strength * qx
                     yaw_correction = -base_strength * qz
                     roll_correction = -1.0 * wx  # Açısal hızı sıfırla
                     
-                    # Açısal hızları sıfırla
+                    # Açısal hızları sıfırla (daha agresif - spin önleme)
+                    # Spin durumunda açısal hızları daha hızlı sıfırlamalıyız
+                    damping_factor = 1.5 if w_mag_current > 2.0 else 1.0  # Spin varsa daha agresif
+                    
                     if abs(wy) > 0.1:
-                        pitch_correction -= 0.3 * np.sign(wy)
+                        pitch_correction -= 0.5 * damping_factor * np.sign(wy)  # Artırıldı: 0.3 -> 0.5
                     if abs(wz) > 0.1:
-                        yaw_correction -= 0.3 * np.sign(wz)
+                        yaw_correction -= 0.5 * damping_factor * np.sign(wz)  # Artırıldı: 0.3 -> 0.5
+                    if abs(wx) > 0.1:
+                        roll_correction -= 0.8 * damping_factor * np.sign(wx)  # Roll için daha agresif
                     
                     pitch = np.clip(pitch_correction, -1.0, 1.0)
                     yaw = np.clip(yaw_correction, -1.0, 1.0)
                     roll = np.clip(roll_correction, -1.0, 1.0)
                     
-                    # Thrust kontrolü: Yumuşak yere değme
+                    # Thrust kontrolü: Spin, yükseklik ve hız bazlı akıllı motor kontrolü
+                    # KRİTİK: Motor her zaman gerekli durumlarda açılmalı
                     thrust = -1.0  # Varsayılan: thrust yok
                     
-                    # Yükseklik kontrolü: Hedef yüksekliğe yumuşak bir şekilde yaklaş
+                    # Açısal hız büyüklüğü (spin kontrolü için)
+                    w_mag_current = np.sqrt(wx*wx + wy*wy + wz*wz)
+                    
+                    # 1. SPIN KONTROLÜ (En öncelikli): Açısal hız yüksekse motor aç
+                    if w_mag_current > 2.0:  # Spin durumu (kritik)
+                        # Spin sırasında thrust aç: Roket stabilize olsun
+                        spin_thrust_factor = min(0.5, w_mag_current / 8.0)  # Max 0.5 thrust
+                        thrust_spin = (spin_thrust_factor * 2.0) - 1.0  # [-1, 0.0]
+                        thrust = max(thrust, thrust_spin)  # Spin thrust'u en öncelikli
+                    
+                    # 2. EĞİKLİK KONTROLÜ: Çok eğikse stabilizasyon için thrust
+                    if up_y < 0.7 and w_mag_current > 1.0:
+                        # Eğik ve dönüyor: Ekstra thrust (stabilizasyon)
+                        tilt_thrust_factor = min(0.3, (0.7 - up_y) * 0.5)
+                        thrust_tilt = (tilt_thrust_factor * 2.0) - 1.0  # [-1, -0.4]
+                        thrust = max(thrust, thrust_tilt)
+                    
+                    # 3. YÜKSEKLİK KONTROLÜ: Hedef yüksekliğe yumuşak bir şekilde yaklaş
                     target_dy = TARGET_BOTTOM_HEIGHT
                     height_error = current_dy - target_dy
                     
                     if height_error > 0.1:  # Hedef yüksekliğin üstündeyse
                         # Yumuşak düşüş: Dikey hıza göre thrust ayarla
                         if vy < -1.0:  # Hızlı düşüş varsa
-                            # Hafif thrust uygula (yumuşak iniş)
-                            thrust_factor = min(0.25, abs(vy) / 12.0)
-                            thrust = (thrust_factor * 2.0) - 1.0  # [-1, -0.5]
+                            # Daha agresif thrust (yumuşak iniş ama yeterince güçlü)
+                            descent_thrust_factor = min(0.4, abs(vy) / 10.0)  # Artırıldı: 0.25 -> 0.4
+                            thrust_descent = (descent_thrust_factor * 2.0) - 1.0  # [-1, -0.2]
+                            # Spin thrust'u varsa onu koru, yoksa descent thrust'u kullan
+                            if w_mag_current <= 2.0:
+                                thrust = max(thrust, thrust_descent)
                         elif vy > 0.5:  # Yukarı gidiyorsa
-                            thrust = -1.0  # Thrust kapat
+                            # Spin yoksa thrust kapat, varsa biraz açık bırak (stabilizasyon için)
+                            if w_mag_current <= 2.0:
+                                thrust = -1.0  # Thrust kapat
+                            else:
+                                # Spin varsa minimal thrust (stabilizasyon için)
+                                thrust = max(thrust, -0.9)
                     elif current_dy < 0.3:  # Yere değmiş
                         # Yere değdikten sonra: Hafif thrust ile yere basınç (sekme önleme)
                         if vy < -0.5:
-                            thrust_factor = min(0.2, abs(vy) / 10.0)
-                            thrust = (thrust_factor * 2.0) - 1.0
+                            landing_thrust_factor = min(0.3, abs(vy) / 8.0)  # Artırıldı: 0.2 -> 0.3
+                            thrust_landing = (landing_thrust_factor * 2.0) - 1.0  # [-1, -0.4]
+                            thrust = max(thrust, thrust_landing)
                         elif abs(vy) < 0.2:
-                            thrust = -0.98  # Çok hafif thrust (yer çekimi dengeleme)
+                            # Spin yoksa minimal thrust, varsa biraz daha fazla
+                            if w_mag_current <= 1.0:
+                                thrust = max(thrust, -0.98)  # Çok hafif thrust
+                            else:
+                                thrust = max(thrust, -0.95)  # Spin varsa biraz daha fazla
+                    
+                    # 4. MİNİMUM THRUST KONTROLÜ: Eğer hala -1.0 ise ve roket yukarıda ise minimal thrust
+                    # (Yer çekimine karşı minimal destek - roket kontrolsüz düşmesin)
+                    if thrust <= -0.99 and current_dy > 1.0:
+                        # Yukarıda ve hiç thrust yok: Minimal thrust (yer çekimi dengeleme)
+                        thrust = -0.97  # Çok minimal ama sıfır değil
                     
                     # Yatay hızları sıfırla
                     if abs(vx) > 0.2:
@@ -716,9 +776,19 @@ def main():
                     print("\n\nTest sonlandırılıyor...")
                     return
             
-            # KRİTİK: Yeni episode başlamadan ÖNCE environment state'ini temizle
-            # initialStart() çağrılacak, Unity'ye yeni reset gönderilecek
-            # Bu yüzden environment state'ini temizlemeliyiz ki Unity düzgün reset olsun
+            # KRİTİK: Yeni episode başlamadan ÖNCE Unity buffer'ını temizle
+            # Success sonrası yumuşak geçiş sırasında Unity'ye komutlar gönderildi,
+            # bu komutlar Unity'nin buffer'ında kalabilir ve bir sonraki episode'u etkileyebilir
+            # Unity'nin buffer'ını temizlemek için bir kez state oku (eğer bekleyen response varsa)
+            try:
+                # Eğer Unity'nin buffer'ında bekleyen bir response varsa oku (temizle)
+                # Ama bu bloklayıcı olabilir, bu yüzden timeout ile yapalım
+                # Basit çözüm: initialStart() zaten Unity'ye reset gönderecek, bu da buffer'ı temizleyecek
+                pass
+            except:
+                pass
+            
+            # Environment state'ini temizle (bir sonraki episode için)
             environment.done = False
             environment.step_count = 0
             environment.termination_reason = "Running"
